@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Freelance Marketplace - Efast</title>
+
+    <!-- 🛡️ VPN + Network Guard (সমস্যা হলে কমেন্ট রাখুন) -->
+    <!-- <script src="guard.js"></script> -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;500;600;700;800;900&display=swap');
+        :root { --primary: #07966f; --primary-dark: #067a5a; --primary-light: #e6f8f2; --text: #13233f; --muted: #63718a; --border: #e1e8ee; --bg: #f8fafc; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: 'Maven Pro', sans-serif; }
+        .navbar { position: sticky; top: 0; z-index: 90; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 20px; }
+        .navbar-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .navbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+        .navbar-brand .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), #14b88a); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 18px; }
+        .navbar-brand h2 { font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+        .navbar-actions { display: flex; align-items: center; gap: 10px; }
+        .nav-btn { padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; }
+        .nav-btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+        .nav-btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .nav-btn-primary { background: var(--primary); color: #fff; }
+        .nav-btn-primary:hover { background: var(--primary-dark); }
+        .hero { padding: 60px 20px 50px; background: radial-gradient(circle at 78% 26%, #e6f8f2 0, #f4fbf8 26%, #fff 62%); border-bottom: 1px solid #edf2f5; text-align: center; }
+        .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--primary-light); border: 1px solid #d9eee7; color: var(--primary-dark); border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+        .hero h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 900; letter-spacing: -.04em; margin: 18px 0 14px; color: var(--text); line-height: 1.15; }
+        .hero h1 span { color: var(--primary); }
+        .hero p { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: 15px; line-height: 1.7; }
+        .search-container { max-width: 690px; margin: 28px auto 0; display: flex; align-items: center; padding: 7px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 14px 32px rgba(18,47,78,.09); }
+        .search-container i { color: #8692a5; margin-left: 14px; font-size: 17px; }
+        .search-container input { flex: 1; min-height: 46px; padding: 0 12px; border: none; outline: none; font-size: 14px; color: var(--text); background: transparent; font-family: inherit; }
+        .search-container button { min-height: 46px; padding: 0 26px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; font-size: 14px; transition: background .2s; }
+        .search-container button:hover { background: var(--primary-dark); }
+        .hero-stats { max-width: 700px; margin: 30px auto 0; display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .hero-stat { text-align: center; }
+        .hero-stat .num { font-size: 24px; font-weight: 900; color: var(--primary); }
+        .hero-stat .lbl { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+        .section { max-width: 1200px; margin: 0 auto; padding: 50px 20px 20px; }
+        .section-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+        .section-head h2 { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+        .section-head h2 small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 4px; letter-spacing: 0; }
+        .section-link { font-size: 13px; font-weight: 800; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: none; border: none; font-family: inherit; }
+        .section-link:hover { color: var(--primary-dark); }
+        .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+        .cat-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 20px 14px; text-align: center; cursor: pointer; transition: all .25s; }
+        .cat-card:hover { transform: translateY(-4px); border-color: #b9ddcf; box-shadow: 0 12px 24px rgba(7,150,111,.08); }
+        .cat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 12px; }
+        .cat-card h4 { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+        .cat-card p { font-size: 11px; color: var(--muted); font-weight: 600; }
+        .filter-bar { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; scrollbar-width: none; }
+        .filter-bar::-webkit-scrollbar { display: none; }
+        .filter-btn { padding: 8px 18px; border-radius: 999px; background: #fff; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all .2s; font-family: inherit; }
+        .filter-btn.active, .filter-btn:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .job-list { display: grid; gap: 16px; }
+        .job-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 22px; transition: all .25s; }
+        .job-card:hover { transform: translateY(-3px); border-color: #cfe2dc; box-shadow: 0 12px 28px rgba(7,150,111,.08); }
+        .job-card-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+        .job-card-header h3 { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.3; }
+        .job-budget { font-size: 19px; font-weight: 900; color: var(--primary); white-space: nowrap; }
+        .job-meta { display: flex; gap: 16px; font-size: 12.5px; color: var(--muted); font-weight: 600; flex-wrap: wrap; margin-bottom: 12px; }
+        .job-meta i { margin-right: 4px; color: #8692a5; }
+        .job-desc { color: #4f5f76; font-size: 13.5px; line-height: 1.6; margin-bottom: 14px; }
+        .job-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid #edf1f5; gap: 12px; flex-wrap: wrap; }
+        .job-skills { display: flex; gap: 6px; flex-wrap: wrap; }
+        .skill-tag { padding: 4px 10px; background: #f0f5f3; border-radius: 999px; font-size: 11px; font-weight: 700; color: #4f5f76; }
+        .apply-btn { padding: 10px 22px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+        .apply-btn:hover { background: var(--primary-dark); }
+        .apply-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .gig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+        .gig-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; cursor: pointer; transition: all .25s; position: relative; }
+        .gig-card:hover { transform: translateY(-4px); border-color: #cfe2dc; box-shadow: 0 14px 30px rgba(7,150,111,.08); }
+        .gig-cover { height: 130px; background: linear-gradient(135deg, #e6f8f2, #d4f0e6); display: flex; align-items: center; justify-content: center; font-size: 42px; color: var(--primary); position: relative; }
+        .gig-badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; background: rgba(255,255,255,.95); border-radius: 999px; font-size: 10px; font-weight: 800; color: var(--primary-dark); text-transform: uppercase; }
+        .gig-delete-btn { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%; background: rgba(239,68,68,.9); color: #fff; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .gig-delete-btn:hover { background: #dc2626; }
+        .gig-body { padding: 16px; }
+        .gig-body h4 { font-size: 14px; font-weight: 800; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 40px; }
+        .gig-seller { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+        .gig-seller-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #14b88a); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+        .gig-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #edf1f5; }
+        .gig-rating { font-size: 12px; color: #f59e0b; font-weight: 700; }
+        .gig-price { font-size: 15px; font-weight: 900; color: var(--primary); }
+        .gig-price small { font-size: 11px; font-weight: 600; color: var(--muted); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal.open { display: flex; }
+        .modal-content { background: #fff; border-radius: 20px; padding: 28px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+        .modal-content h2 { font-size: 20px; font-weight: 900; margin-bottom: 4px; color: var(--text); }
+        .modal-content .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+        .form-label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 13.5px; outline: none; font-family: inherit; transition: border .2s; color: var(--text); background: #fff; }
+        .form-control:focus { border-color: var(--primary); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+        .btn-cancel { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; color: var(--muted); font-family: inherit; }
+        .btn-submit { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+        .btn-submit:hover { background: var(--primary-dark); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+        .empty-state i { font-size: 44px; color: #cbd5e1; margin-bottom: 14px; display: block; }
+        .empty-state p { font-size: 14px; font-weight: 700; }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 50px; color: var(--muted); gap: 10px; font-weight: 600; }
+        @media (max-width: 640px) {
+            .job-card-header { flex-direction: column; }
+            .hero-stats { gap: 24px; }
+            .navbar-brand h2 { font-size: 16px; }
+            .nav-btn { padding: 8px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-brand">
+                <div class="logo">F</div>
+                <h2>Freelance</h2>
+            </a>
+            <div class="navbar-actions">
+                <button class="nav-btn nav-btn-outline" onclick="window.location.href='index.html'">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button class="nav-btn nav-btn-primary" onclick="openPostGigModal()">
+                    <i class="fas fa-plus"></i> Post a Service
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-eyebrow">
+            <i class="fas fa-bolt"></i> #1 Freelance Marketplace
+        </div>
+        <h1>Find the perfect <span>freelance</span><br>services for your business</h1>
+        <p>Work with talented freelancers from around the world. Post your project, receive proposals, and hire the best fit.</p>
+        
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search for any service or project..." oninput="handleSearch()" />
+            <button onclick="handleSearch()">Search</button>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="num" id="statJobs">0+</div>
+                <div class="lbl">Active Jobs</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num" id="statFreelancers">0+</div>
+                <div class="lbl">Freelancers</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num" id="statGigs">0+</div>
+                <div class="lbl">Services</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <h2>Popular Categories <small>Explore jobs by category</small></h2>
+            <a class="section-link" onclick="filterCategory('all', null); return false;">View All <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="cat-grid" id="catGrid"></div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <h2>Latest Services <small>Fresh gigs from top freelancers</small></h2>
+            <button class="section-link" onclick="openPostGigModal()">
+                <i class="fas fa-plus-circle"></i> Post Your Service
+            </button>
+        </div>
+        <div class="gig-grid" id="gigGrid">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading services...</div>
+        </div>
+    </section>
+
+    <section class="section" style="padding-bottom: 60px;">
+        <div class="section-head">
+            <h2>Popular Works <small>Browse open projects waiting for you</small></h2>
+        </div>
+        
+        <div class="filter-bar" id="filterBar">
+            <button class="filter-btn active" onclick="filterCategory('all', this)">All Jobs</button>
+            <button class="filter-btn" onclick="filterCategory('Graphic Design', this)">Graphic Design</button>
+            <button class="filter-btn" onclick="filterCategory('Content Writing', this)">Content Writing</button>
+            <button class="filter-btn" onclick="filterCategory('Web Development', this)">Web Development</button>
+            <button class="filter-btn" onclick="filterCategory('Video Editing', this)">Video Editing</button>
+            <button class="filter-btn" onclick="filterCategory('Data Entry', this)">Data Entry</button>
+            <button class="filter-btn" onclick="filterCategory('Virtual Assistant', this)">Virtual Assistant</button>
+        </div>
+
+        <div id="jobList" class="job-list">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading jobs...</div>
+        </div>
+    </section>
+
+    <div id="applyModal" class="modal">
+        <div class="modal-content">
+            <h2>Apply for Project</h2>
+            <p class="sub" id="applyProjectTitle">Project Title</p>
+            
+            <div style="margin-bottom: 16px;">
+                <label class="form-label">Cover Note</label>
+                <textarea id="applyCoverNote" rows="4" class="form-control" placeholder="Why should we hire you?" maxlength="800"></textarea>
+                <p style="font-size:11px;color:var(--muted);margin-top:4px;">Minimum 20 characters</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('applyModal')">Cancel</button>
+                <button class="btn-submit" id="applySubmitBtn" onclick="submitProposal()">Submit Proposal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="postGigModal" class="modal">
+        <div class="modal-content">
+            <h2>Post a Service</h2>
+            <p class="sub">Tell others what service you offer</p>
+            
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Service Title</label>
+                <input type="text" id="gigTitle" class="form-control" placeholder="I will design a professional logo" maxlength="100" />
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Category</label>
+                <select id="gigCategory" class="form-control">
+                    <option>Graphic Design</option>
+                    <option>Content Writing</option>
+                    <option>Web Development</option>
+                    <option>Video Editing</option>
+                    <option>Data Entry</option>
+                    <option>Social Media</option>
+                    <option>Translation</option>
+                    <option>Virtual Assistant</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Description</label>
+                <textarea id="gigDesc" rows="3" class="form-control" placeholder="Describe your service in detail..." maxlength="2000"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div>
+                    <label class="form-label">Starting Price (৳)</label>
+                    <input type="number" id="gigPrice" class="form-control" placeholder="500" min="50" max="100000" />
+                </div>
+                <div>
+                    <label class="form-label">Delivery (Days)</label>
+                    <input type="number" id="gigDelivery" class="form-control" placeholder="3" min="1" max="90" />
+                </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <label class="form-label">Skills (comma separated)</label>
+                <input type="text" id="gigSkills" class="form-control" placeholder="Photoshop, Illustrator, Figma" maxlength="200" />
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('postGigModal')">Cancel</button>
+                <button class="btn-submit" id="gigSubmitBtn" onclick="submitGig()">Publish Service</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gigDetailModal" class="modal">
+        <div class="modal-content">
+            <div id="gigDetailBody"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('gigDetailModal')">Close</button>
+                <button class="btn-submit" id="contactSellerBtn" onclick="contactSeller()">Contact Seller</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══ FIREBASE CONFIG (efast-25f96) — NEW ═══
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-fVkzumhCfVyXs7TUEaT0SmvvvPS5I8E",
+            authDomain: "efast-25f96.firebaseapp.com",
+            databaseURL: "https://efast-25f96-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "efast-25f96",
+            storageBucket: "efast-25f96.firebasestorage.app",
+            messagingSenderId: "741534475360",
+            appId: "1:741534475360:web:ace117b7f90d927fa3cf05",
+            measurementId: "G-W1WJ5PVTPK"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        let userId = null;
+        let userName = 'User';
+        let userPhone = '';
+        let allProjects = [];
+        let allGigs = [];
+        let currentCategory = 'all';
+        let currentSearch = '';
+        let selectedProject = null;
+        let selectedGig = null;
+
+        // ─── XSS Protection ───
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        }
+
+        const CATEGORIES = [
+            { name: 'Graphic Design', icon: 'fa-palette', color: '#8b5cf6', bg: '#f3e8ff' },
+            { name: 'Content Writing', icon: 'fa-pen-fancy', color: '#3b82f6', bg: '#dbeafe' },
+            { name: 'Web Development', icon: 'fa-code', color: '#10b981', bg: '#d1fae5' },
+            { name: 'Video Editing', icon: 'fa-video', color: '#ef4444', bg: '#fee2e2' },
+            { name: 'Data Entry', icon: 'fa-keyboard', color: '#f59e0b', bg: '#fef3c7' },
+            { name: 'Social Media', icon: 'fa-share-nodes', color: '#ec4899', bg: '#fce7f3' },
+            { name: 'Translation', icon: 'fa-language', color: '#06b6d4', bg: '#cffafe' },
+            { name: 'Virtual Assistant', icon: 'fa-headset', color: '#6366f1', bg: '#e0e7ff' }
+        ];
+
+        // ─── AUTH GUARD ───
+        auth.onAuthStateChanged((user) => {
+            if (!user) { window.location.replace('login-signup.html'); return; }
+            userId = user.uid;
+            
+            db.ref('users/' + userId).on('value', (snap) => {
+                const u = snap.val() || {};
+                userName = u.userName || u.name || 'User';
+                userPhone = u.userPhone || u.phone || '';
+            });
+
+            renderCategories();
+            loadJobs();
+            loadGigs();
+            loadStats();
+        });
+
+        // ─── STATS (freelancers = users with gigs) ───
+        function loadStats() {
+            db.ref('freelanceProjects').on('value', (snap) => {
+                const count = Object.values(snap.val() || {}).filter(p => p.status === 'open').length;
+                document.getElementById('statJobs').innerText = count + '+';
+            });
+
+            db.ref('freelanceGigs').on('value', (snap) => {
+                const gigs = Object.values(snap.val() || {});
+                document.getElementById('statGigs').innerText = gigs.length + '+';
+                const uniqueSellers = new Set(gigs.map(g => g.sellerUid).filter(Boolean));
+                document.getElementById('statFreelancers').innerText = uniqueSellers.size + '+';
+            });
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('catGrid');
+            grid.innerHTML = CATEGORIES.map(c => `
+                <div class="cat-card" onclick="filterCategory('${c.name}', null)">
+                    <div class="cat-icon" style="background:${c.bg};color:${c.color};">
+                        <i class="fas ${c.icon}"></i>
+                    </div>
+                    <h4>${c.name}</h4>
+                    <p>Explore jobs</p>
+                </div>
+            `).join('');
+        }
+
+        // ─── JOBS ───
+        function loadJobs() {
+            db.ref('freelanceProjects').on('value', (snap) => {
+                allProjects = [];
+                snap.forEach(child => {
+                    const p = child.val();
+                    if (p.status === 'open') allProjects.push({ id: child.key, ...p });
+                });
+                allProjects.reverse();
+                renderJobs();
+            });
+        }
+
+        function renderJobs() {
+            const container = document.getElementById('jobList');
+            let filtered = allProjects;
+
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(p => (p.category || '').toLowerCase() === currentCategory.toLowerCase());
+            }
+            if (currentSearch.trim() !== '') {
+                const q = currentSearch.toLowerCase();
+                filtered = filtered.filter(p => 
+                    (p.title || '').toLowerCase().includes(q) || 
+                    (p.description || '').toLowerCase().includes(q) ||
+                    (p.skills || '').toLowerCase().includes(q)
+                );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-briefcase"></i>
+                        <p>No jobs found</p>
+                        <p style="font-size: 13px; font-weight: 500; margin-top: 6px;">Try changing filters or check back later.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const skills = p.skills ? p.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const deadline = p.deadline ? new Date(p.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Flexible';
+                const proposalCount = p.applicantsCount || 0;
+                const isOwn = p.postedByUid === userId;
+                const safeId = escapeAttr(p.id);
+                const safeTitle = escapeAttr(p.title || 'Untitled Project');
+
+                return `
+                    <div class="job-card">
+                        <div class="job-card-header">
+                            <h3>${escapeHtml(p.title || 'Untitled Project')}</h3>
+                            <div class="job-budget">৳${(p.budget || 0).toLocaleString()}</div>
+                        </div>
+                        
+                        <div class="job-meta">
+                            <span><i class="fas fa-tag"></i> ${escapeHtml(p.category || 'General')}</span>
+                            <span><i class="fas fa-clock"></i> ${escapeHtml(deadline)}</span>
+                            <span><i class="fas fa-user-friends"></i> ${proposalCount} proposals</span>
+                        </div>
+
+                        <p class="job-desc">${escapeHtml((p.description || '').substring(0, 200))}${(p.description || '').length > 200 ? '...' : ''}</p>
+
+                        ${skills.length > 0 ? `
+                            <div class="job-skills" style="margin-bottom:12px;">
+                                ${skills.slice(0, 5).map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        <div class="job-footer">
+                            <span style="font-size: 12px; color: var(--muted); font-weight: 600;">
+                                <i class="fas fa-user-circle"></i> ${escapeHtml(p.postedByName || 'Employer')}
+                            </span>
+                            ${isOwn ? `
+                                <button class="apply-btn" disabled style="background:#cbd5e1;cursor:not-allowed;">
+                                    <i class="fas fa-user"></i> Your Project
+                                </button>
+                            ` : `
+                                <button class="apply-btn" onclick="openApplyModal('${safeId}', '${safeTitle}')">
+                                    <i class="fas fa-paper-plane"></i> Apply Now
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterCategory(cat, btn) {
+            currentCategory = cat;
+            if (btn) {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            } else {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('active');
+                    if (b.innerText.trim().toLowerCase() === cat.toLowerCase()) b.classList.add('active');
+                });
+            }
+            renderJobs();
+            document.querySelector('#jobList').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function handleSearch() {
+            currentSearch = document.getElementById('searchInput').value;
+            renderJobs();
+            renderGigs();
+        }
+
+        // ─── GIGS ───
+        function loadGigs() {
+            db.ref('freelanceGigs').on('value', (snap) => {
+                allGigs = [];
+                snap.forEach(child => {
+                    allGigs.push({ id: child.key, ...child.val() });
+                });
+                allGigs.reverse();
+                renderGigs();
+            });
+        }
+
+        function renderGigs() {
+            const grid = document.getElementById('gigGrid');
+            let filtered = allGigs;
+            if (currentSearch.trim() !== '') {
+                const q = currentSearch.toLowerCase();
+                filtered = filtered.filter(g => 
+                    (g.title || '').toLowerCase().includes(q) || 
+                    (g.description || '').toLowerCase().includes(q)
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-box-open"></i>
+                        <p>No services found</p>
+                        <p style="font-size: 13px; font-weight: 500; margin-top: 6px;">Be the first to post a service!</p>
+                    </div>`;
+                return;
+            }
+
+            const latest = filtered.slice(0, 6);
+            grid.innerHTML = latest.map(g => {
+                const icon = getCategoryIcon(g.category);
+                const name = g.sellerName || 'Freelancer';
+                const isOwn = g.sellerUid === userId;
+                const avatarLetter = (name && name.length) ? name[0].toUpperCase() : 'F';
+                const rating = g.rating ? Number(g.rating).toFixed(1) : '5.0';
+                
+                return `
+                    <div class="gig-card" onclick="openGigDetail('${escapeAttr(g.id)}')">
+                        <div class="gig-cover">
+                            <span class="gig-badge">${escapeHtml(g.category || 'Service')}</span>
+                            <i class="fas ${icon}"></i>
+                            ${isOwn ? `<button class="gig-delete-btn" onclick="deleteMyGig(event, '${escapeAttr(g.id)}')" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                        <div class="gig-body">
+                            <h4>${escapeHtml(g.title || 'Untitled Service')}</h4>
+                            <div class="gig-seller">
+                                <div class="gig-seller-avatar">${avatarLetter}</div>
+                                <span>${escapeHtml(name)}</span>
+                            </div>
+                            <div class="gig-footer">
+                                <div class="gig-rating">
+                                    <i class="fas fa-star"></i> ${rating}
+                                </div>
+                                <div class="gig-price">
+                                    ৳${g.price || 0}<small> / job</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getCategoryIcon(cat) {
+            const found = CATEGORIES.find(c => c.name.toLowerCase() === (cat || '').toLowerCase());
+            return found ? found.icon : 'fa-briefcase';
+        }
+
+        // ─── POST GIG ───
+        function openPostGigModal() {
+            document.getElementById('gigTitle').value = '';
+            document.getElementById('gigDesc').value = '';
+            document.getElementById('gigPrice').value = '';
+            document.getElementById('gigDelivery').value = '';
+            document.getElementById('gigSkills').value = '';
+            openModal('postGigModal');
+        }
+
+        async function submitGig() {
+            const title = document.getElementById('gigTitle').value.trim();
+            const category = document.getElementById('gigCategory').value;
+            const desc = document.getElementById('gigDesc').value.trim();
+            const price = parseFloat(document.getElementById('gigPrice').value) || 0;
+            const delivery = parseInt(document.getElementById('gigDelivery').value) || 3;
+            const skills = document.getElementById('gigSkills').value.trim();
+
+            if (title.length < 5 || title.length > 100) {
+                alert('⚠️ Title must be 5-100 characters.');
+                return;
+            }
+            if (desc.length < 20 || desc.length > 2000) {
+                alert('⚠️ Description must be 20-2000 characters.');
+                return;
+            }
+            if (price < 50 || price > 100000) {
+                alert('⚠️ Price must be between ৳50 and ৳100,000.');
+                return;
+            }
+            if (delivery < 1 || delivery > 90) {
+                alert('⚠️ Delivery must be 1-90 days.');
+                return;
+            }
+
+            const btn = document.getElementById('gigSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Publishing...';
+
+            try {
+                await db.ref('freelanceGigs').push({
+                    title, category, description: desc,
+                    price, delivery, skills,
+                    sellerUid: userId,
+                    sellerName: userName,
+                    rating: 5.0,
+                    status: 'active',
+                    postedAt: Date.now()
+                });
+                alert('✅ Service published successfully!');
+                closeModal('postGigModal');
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Publish Service';
+            }
+        }
+
+        // ─── DELETE OWN GIG (server-side re-check) ───
+        async function deleteMyGig(event, gigId) {
+            event.stopPropagation();
+            if (!confirm('Delete this service?')) return;
+            try {
+                const snap = await db.ref('freelanceGigs/' + gigId).once('value');
+                const g = snap.val() || {};
+                if (g.sellerUid !== userId) {
+                    alert('❌ You can only delete your own services.');
+                    return;
+                }
+                await db.ref('freelanceGigs/' + gigId).remove();
+                alert('✅ Service deleted.');
+            } catch (e) {
+                alert('❌ Error: ' + e.message);
+            }
+        }
+
+        // ─── GIG DETAIL ───
+        function openGigDetail(gigId) {
+            const g = allGigs.find(x => x.id === gigId);
+            if (!g) { alert('❌ Service not found.'); return; }
+            selectedGig = g;
+            const icon = getCategoryIcon(g.category);
+            const name = g.sellerName || 'Freelancer';
+            const isOwn = g.sellerUid === userId;
+            const avatarLetter = (name && name.length) ? name[0].toUpperCase() : 'F';
+            
+            document.getElementById('gigDetailBody').innerHTML = `
+                <h2>${escapeHtml(g.title || 'Service')}</h2>
+                <p class="sub">${escapeHtml(g.category || 'General')} • Delivered in ${g.delivery || 3} days</p>
+                
+                <div style="background: linear-gradient(135deg, #e6f8f2, #d4f0e6); border-radius: 14px; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--primary); margin-bottom: 16px;">
+                    <i class="fas ${icon}"></i>
+                </div>
+
+                <div style="background: #f8fafc; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #14b88a); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800;">
+                            ${avatarLetter}
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 14px;">${escapeHtml(name)}</div>
+                            <div style="font-size: 11px; color: var(--muted);">Freelancer</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <div class="form-label">Description</div>
+                    <p style="font-size: 13.5px; line-height: 1.6; color: #4f5f76; white-space: pre-wrap;">${escapeHtml(g.description || '')}</p>
+                </div>
+
+                ${g.skills ? `
+                    <div style="margin-bottom: 12px;">
+                        <div class="form-label">Skills</div>
+                        <div class="job-skills">
+                            ${g.skills.split(',').map(s => `<span class="skill-tag">${escapeHtml(s.trim())}</span>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div style="display:flex; justify-content: space-between; padding: 14px; background: var(--primary-light); border-radius: 10px; margin-top: 14px;">
+                    <div>
+                        <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">Starting at</div>
+                        <div style="font-size: 22px; font-weight: 900; color: var(--primary);">৳${g.price || 0}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">Delivery</div>
+                        <div style="font-size: 16px; font-weight: 800;">${g.delivery || 3} days</div>
+                    </div>
+                </div>
+            `;
+
+            const btn = document.getElementById('contactSellerBtn');
+            if (isOwn || !g.sellerUid) {
+                btn.disabled = true;
+                btn.textContent = isOwn ? 'Your Own Service' : 'Seller Not Available';
+                btn.style.background = '#cbd5e1';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Contact Seller';
+                btn.style.background = '';
+            }
+
+            openModal('gigDetailModal');
+        }
+
+        // ─── CONTACT SELLER (rate-limited) ───
+        async function contactSeller() {
+            if (!selectedGig) return;
+            if (!selectedGig.sellerUid) {
+                alert('❌ This seller cannot be contacted.');
+                return;
+            }
+            if (selectedGig.sellerUid === userId) {
+                alert('❌ This is your own service!');
+                return;
+            }
+            
+            // ✅ Rate limit: check if already contacted in last 1 hour
+            try {
+                const existing = await db.ref('notifications/' + selectedGig.sellerUid)
+                    .orderByChild('fromUid').equalTo(userId).once('value');
+                let recentContact = false;
+                const oneHourAgo = Date.now() - (60 * 60 * 1000);
+                existing.forEach(child => {
+                    const v = child.val();
+                    if (v.gigId === selectedGig.id && v.sentAt > oneHourAgo) {
+                        recentContact = true;
+                    }
+                });
+                if (recentContact) {
+                    alert('⚠️ You already contacted this seller recently. Please wait 1 hour.');
+                    return;
+                }
+
+                await db.ref('notifications/' + selectedGig.sellerUid).push({
+                    type: 'gig_inquiry',
+                    fromUid: userId,
+                    fromName: userName,
+                    gigId: selectedGig.id,
+                    gigTitle: selectedGig.title,
+                    message: `${userName} is interested in your service: ${selectedGig.title}`,
+                    sentAt: Date.now(),
+                    read: false
+                });
+                alert('✅ Message sent to seller! They will contact you soon.');
+                closeModal('gigDetailModal');
+            } catch (e) {
+                alert('❌ Failed to send: ' + e.message);
+            }
+        }
+
+        // ─── MODAL ───
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        function openApplyModal(projectId, projectTitle) {
+            selectedProject = projectId;
+            document.getElementById('applyProjectTitle').innerText = projectTitle;
+            document.getElementById('applyCoverNote').value = '';
+            openModal('applyModal');
+        }
+
+        // ─── SUBMIT PROPOSAL (server-side re-check) ───
+        async function submitProposal() {
+            const note = document.getElementById('applyCoverNote').value.trim();
+            if (!note || note.length < 20) {
+                alert('⚠️ Please write at least 20 characters.');
+                return;
+            }
+            if (note.length > 800) {
+                alert('⚠️ Cover note too long (max 800 characters).');
+                return;
+            }
+
+            const btn = document.getElementById('applySubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                // ✅ Server-side re-check project status and ownership
+                const projSnap = await db.ref('freelanceProjects/' + selectedProject).once('value');
+                const proj = projSnap.val();
+                if (!proj) {
+                    alert('❌ This project no longer exists.');
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Proposal';
+                    closeModal('applyModal');
+                    loadJobs();
+                    return;
+                }
+                if (proj.status !== 'open') {
+                    alert('❌ This project is not open anymore.');
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Proposal';
+                    closeModal('applyModal');
+                    loadJobs();
+                    return;
+                }
+                if (proj.postedByUid === userId) {
+                    alert('❌ You cannot apply to your own project!');
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Proposal';
+                    closeModal('applyModal');
+                    return;
+                }
+
+                // ✅ Duplicate check
+                const existing = await db.ref('freelanceProposals')
+                    .orderByChild('uid').equalTo(userId).once('value');
+                let alreadyApplied = false;
+                existing.forEach(child => {
+                    const v = child.val();
+                    if (v.projectId === selectedProject) alreadyApplied = true;
+                });
+                if (alreadyApplied) {
+                    alert('❌ You have already applied for this project!');
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Proposal';
+                    closeModal('applyModal');
+                    return;
+                }
+
+                // ✅ Push proposal
+                await db.ref('freelanceProposals').push({
+                    projectId: selectedProject,
+                    uid: userId,
+                    userName: userName,
+                    userPhone: userPhone,
+                    coverNote: note,
+                    status: 'pending',
+                    submittedAt: Date.now()
+                });
+
+                // ✅ Increment applicant count
+                await db.ref('freelanceProjects/' + selectedProject + '/applicantsCount').transaction(c => (c || 0) + 1);
+
+                // ✅ Notify project owner
+                if (proj.postedByUid) {
+                    await db.ref('notifications/' + proj.postedByUid).push({
+                        title: '📝 New Proposal',
+                        message: `${userName} applied for your project: "${proj.title}"`,
+                        type: 'new_proposal',
+                        sentAt: Date.now(),
+                        read: false
+                    });
+                }
+
+                closeModal('applyModal');
+                alert('✅ Proposal submitted! Admin will review it soon.');
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Submit Proposal';
+            }
+        }
+
+        // ─── Close modal on outside click ───
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) m.classList.remove('open');
+            });
+        });
+    </script>
+</body>
+</html>

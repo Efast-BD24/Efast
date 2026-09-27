@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Marketplace - Efast</title>
+
+    <!-- 🛡️ VPN + Network Guard -->
+    <!-- <script src="guard.js"></script> -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;500;600;700;800;900&display=swap');
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #f5f3ff;
+            --text: #13233f;
+            --muted: #63718a;
+            --border: #e1e8ee;
+            --bg: #f8fafc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); font-family: 'Maven Pro', sans-serif; }
+
+        /* ─── NAVBAR ─── */
+        .navbar { position: sticky; top: 0; z-index: 90; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 20px; }
+        .navbar-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .navbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+        .navbar-brand .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), #a78bfa); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 18px; }
+        .navbar-brand h2 { font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+        .navbar-actions { display: flex; align-items: center; gap: 10px; }
+        .nav-btn { padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; font-family: inherit; }
+        .nav-btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+        .nav-btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .nav-btn-primary { background: var(--primary); color: #fff; }
+        .nav-btn-primary:hover { background: var(--primary-dark); }
+
+        /* ─── HERO ─── */
+        .hero { padding: 55px 20px 45px; background: radial-gradient(circle at 20% 30%, #f5f3ff 0, #ede9fe 20%, #fff 65%); border-bottom: 1px solid #ede9fe; text-align: center; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -50%; right: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(124,58,237,0.08), transparent 70%); border-radius: 50%; }
+        .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--primary-light); border: 1px solid #ddd6fe; color: var(--primary-dark); border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; position: relative; z-index: 1; }
+        .hero h1 { font-size: clamp(28px, 5vw, 46px); font-weight: 900; letter-spacing: -.04em; margin: 18px 0 14px; line-height: 1.15; position: relative; z-index: 1; }
+        .hero h1 span { color: var(--primary); }
+        .hero p { max-width: 620px; margin: 0 auto; color: var(--muted); font-size: 15px; line-height: 1.7; position: relative; z-index: 1; }
+        .search-container { max-width: 690px; margin: 28px auto 0; display: flex; align-items: center; padding: 7px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 14px 32px rgba(124,58,237,.1); position: relative; z-index: 1; }
+        .search-container i { color: #8692a5; margin-left: 14px; font-size: 17px; }
+        .search-container input { flex: 1; min-height: 46px; padding: 0 12px; border: none; outline: none; font-size: 14px; color: var(--text); background: transparent; font-family: inherit; }
+        .search-container button { min-height: 46px; padding: 0 26px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; font-size: 14px; transition: background .2s; font-family: inherit; }
+        .search-container button:hover { background: var(--primary-dark); }
+        .hero-stats { max-width: 700px; margin: 28px auto 0; display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; position: relative; z-index: 1; }
+        .hero-stat { text-align: center; }
+        .hero-stat .num { font-size: 24px; font-weight: 900; color: var(--primary); }
+        .hero-stat .lbl { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+
+        /* ─── SECTION ─── */
+        .section { max-width: 1200px; margin: 0 auto; padding: 45px 20px 20px; }
+        .section-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
+        .section-head h2 { font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+        .section-head h2 small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 4px; letter-spacing: 0; }
+
+        /* ─── CATEGORY ─── */
+        .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+        .cat-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 12px; text-align: center; cursor: pointer; transition: all .25s; position: relative; }
+        .cat-card:hover { transform: translateY(-4px); border-color: #ddd6fe; box-shadow: 0 12px 24px rgba(124,58,237,.1); }
+        .cat-card.active { border-color: var(--primary); background: var(--primary-light); }
+        .cat-card .cat-count { position: absolute; top: 8px; right: 8px; background: var(--primary); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 999px; }
+        .cat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 10px; }
+        .cat-card h4 { font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+        .cat-card p { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+
+        /* ─── FILTER BAR ─── */
+        .filter-bar { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 12px; scrollbar-width: none; }
+        .filter-bar::-webkit-scrollbar { display: none; }
+        .filter-btn { padding: 8px 18px; border-radius: 999px; background: #fff; border: 1px solid var(--border); color: var(--muted); font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all .2s; font-family: inherit; }
+        .filter-btn.active, .filter-btn:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+        /* ─── PRODUCT GRID ─── */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+        .product-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; cursor: pointer; transition: all .25s; position: relative; display: flex; flex-direction: column; }
+        .product-card:hover { transform: translateY(-4px); border-color: #ddd6fe; box-shadow: 0 14px 30px rgba(124,58,237,.12); }
+        .product-image { height: 150px; background: linear-gradient(135deg, #f5f3ff, #ede9fe); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .product-image img { width: 100%; height: 100%; object-fit: cover; }
+        .product-image .placeholder-icon { font-size: 48px; color: #c4b5fd; }
+        .product-platform { position: absolute; top: 10px; left: 10px; padding: 5px 10px; background: rgba(255,255,255,.96); border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; display: flex; align-items: center; gap: 4px; }
+        .product-delete-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(239,68,68,.92); color: #fff; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+        .product-delete-btn:hover { background: #dc2626; }
+        .product-body { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+        .product-body h4 { font-size: 14px; font-weight: 800; line-height: 1.35; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; }
+        .product-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+        .mini-badge { font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .02em; }
+        .badge-aged { background: #fef3c7; color: #92400e; }
+        .badge-monetized { background: #d1fae5; color: #065f46; }
+        .badge-verified { background: #dbeafe; color: #1e40af; }
+        .product-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+        .product-price { font-size: 16px; font-weight: 900; color: var(--primary); }
+        .product-seller { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--muted); font-weight: 700; }
+        .seller-avatar-mini { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #a78bfa); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; }
+
+        /* ─── MODAL ─── */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal.open { display: flex; }
+        .modal-content { background: #fff; border-radius: 20px; padding: 26px; width: 100%; max-width: 500px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+        .modal-content h2 { font-size: 19px; font-weight: 900; margin-bottom: 4px; color: var(--text); }
+        .modal-content .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+        .form-label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 13.5px; outline: none; font-family: inherit; transition: border .2s; color: var(--text); background: #fff; }
+        .form-control:focus { border-color: var(--primary); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+        .btn-cancel { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; color: var(--muted); font-family: inherit; }
+        .btn-submit { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; font-family: inherit; transition: all .2s; }
+        .btn-submit:hover { background: var(--primary-dark); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* ─── IMAGE UPLOAD ─── */
+        .img-upload { border: 2px dashed var(--border); border-radius: 12px; padding: 22px 14px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+        .img-upload:hover { border-color: var(--primary); background: var(--primary-light); }
+        .img-upload i { font-size: 28px; color: var(--primary); margin-bottom: 6px; display: block; }
+        .img-upload p { font-size: 12px; color: var(--muted); margin: 0; font-weight: 600; }
+        .img-preview { margin-top: 10px; position: relative; display: inline-block; }
+        .img-preview img { max-width: 100%; max-height: 160px; border-radius: 10px; border: 1px solid var(--border); }
+
+        /* ─── CHECKBOX ─── */
+        .checkbox-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; margin-bottom: 8px; }
+        .checkbox-row input { width: 18px; height: 18px; accent-color: var(--primary); }
+        .checkbox-row label { font-size: 13px; font-weight: 700; cursor: pointer; flex: 1; }
+
+        /* ─── EMPTY & LOADING ─── */
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); grid-column: 1 / -1; }
+        .empty-state i { font-size: 44px; color: #cbd5e1; margin-bottom: 14px; display: block; }
+        .empty-state p { font-size: 14px; font-weight: 700; }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 50px; color: var(--muted); gap: 10px; font-weight: 600; grid-column: 1 / -1; }
+
+        @media (max-width: 640px) {
+            .navbar-brand h2 { font-size: 16px; }
+            .nav-btn { padding: 8px 12px; font-size: 12px; }
+            .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .product-image { height: 120px; }
+            .product-body { padding: 12px; }
+            .product-body h4 { font-size: 13px; min-height: 34px; }
+            .product-price { font-size: 15px; }
+            .hero-stats { gap: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-brand">
+                <div class="logo">D</div>
+                <h2>Digital Market</h2>
+            </a>
+            <div class="navbar-actions">
+                <button class="nav-btn nav-btn-outline" onclick="window.location.href='index.html'">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button class="nav-btn nav-btn-primary" onclick="openPostProductModal()">
+                    <i class="fas fa-plus"></i> Sell Account
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-eyebrow">
+            <i class="fas fa-shield-halved"></i> Trusted Digital Asset Marketplace
+        </div>
+        <h1>Buy & Sell <span>digital assets</span><br>safe & fast</h1>
+        <p>Buy or sell Gmail accounts, YouTube channels, Facebook pages, websites, apps and more — all in one place.</p>
+
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search Gmail, YouTube, Facebook..." oninput="handleSearch()" />
+            <button onclick="handleSearch()">Search</button>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="num" id="statProducts">0+</div>
+                <div class="lbl">Listings</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num" id="statSellers">0+</div>
+                <div class="lbl">Sellers</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num">8+</div>
+                <div class="lbl">Platforms</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section class="section" style="padding-bottom: 10px;">
+        <div class="section-head">
+            <h2>Platforms <small>Choose what you want to buy or sell</small></h2>
+        </div>
+        <div class="cat-grid" id="catGrid"></div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section class="section" style="padding-bottom: 60px;">
+        <div class="section-head">
+            <h2>Latest Listings <small>Fresh digital assets from verified sellers</small></h2>
+        </div>
+
+        <div class="filter-bar" id="filterBar">
+            <button class="filter-btn active" onclick="filterType('all', this)">All</button>
+            <button class="filter-btn" onclick="filterType('Aged', this)">🕰️ Aged</button>
+            <button class="filter-btn" onclick="filterType('Monetized', this)">💰 Monetized</button>
+            <button class="filter-btn" onclick="filterType('Verified', this)">✅ Verified</button>
+            <button class="filter-btn" onclick="filterType('Fresh', this)">🌱 Fresh</button>
+        </div>
+
+        <div id="productGrid" class="product-grid">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading listings...</div>
+        </div>
+    </section>
+
+    <!-- POST PRODUCT MODAL -->
+    <div id="postProductModal" class="modal">
+        <div class="modal-content">
+            <h2>Sell a Digital Asset</h2>
+            <p class="sub">Fill in details carefully. Accurate info = faster sale</p>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Listing Title *</label>
+                <input type="text" id="pp-title" class="form-control" placeholder="e.g. Aged Gmail Account (2018)" maxlength="80" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div>
+                    <label class="form-label">Platform *</label>
+                    <select id="pp-category" class="form-control">
+                        <option value="Gmail">Gmail</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Website">Website</option>
+                        <option value="Mobile App">Mobile App</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Type *</label>
+                    <select id="pp-condition" class="form-control">
+                        <option value="Fresh">Fresh</option>
+                        <option value="Aged">Aged</option>
+                        <option value="Monetized">Monetized</option>
+                        <option value="Verified">Verified</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Description *</label>
+                <textarea id="pp-desc" rows="4" class="form-control" placeholder="Describe full details — account age, features, subscribers/followers, country, monetization status, etc." maxlength="1000"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div>
+                    <label class="form-label">Price (৳) *</label>
+                    <input type="number" id="pp-price" class="form-control" placeholder="5000" min="1" max="10000000" />
+                </div>
+                <div>
+                    <label class="form-label">Account Age *</label>
+                    <input type="text" id="pp-location" class="form-control" placeholder="e.g. 3 Years" maxlength="30" />
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Your Contact Number (WhatsApp) *</label>
+                <input type="tel" id="pp-phone" class="form-control" placeholder="01XXXXXXXXX" maxlength="11" />
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="form-label">Listing Features</label>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="pp-feat-aged">
+                    <label for="pp-feat-aged">🕰️ Old Account (2+ years)</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="pp-feat-monetized">
+                    <label for="pp-feat-monetized">💰 Monetized / Earning enabled</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="pp-feat-verified">
+                    <label for="pp-feat-verified">✅ Verified / Badge available</label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <label class="form-label">Screenshot (Optional)</label>
+                <div class="img-upload" onclick="document.getElementById('pp-image').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>Click to upload screenshot</strong></p>
+                    <p style="font-size: 10px; margin-top: 3px;">JPG, PNG, WEBP (Max 3MB)</p>
+                </div>
+                <input type="file" id="pp-image" accept="image/*" style="display: none;" onchange="previewProductImage(this)" />
+                <div id="pp-image-preview" class="img-preview" style="display: none;">
+                    <img id="pp-preview-img" src="" alt="preview" />
+                    <button type="button" onclick="removeProductImage(event)" style="position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 11px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 12px; margin: 14px 0 0;">
+                <p style="font-size: 11px; color: #92400e; line-height: 1.5;">
+                    <strong>⚠️ Warning:</strong> Fake listings will be removed and your account may be banned.
+                </p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('postProductModal')">Cancel</button>
+                <button class="btn-submit" id="pp-submit-btn" onclick="submitProduct()">Publish Listing</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCT DETAIL MODAL -->
+    <div id="productDetailModal" class="modal">
+        <div class="modal-content">
+            <div id="productDetailBody"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('productDetailModal')">Close</button>
+                <button class="btn-submit" id="contactSellerBtn" onclick="contactSeller()">Contact Seller</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ JAVASCRIPT ═══════════ -->
+    <script>
+        // ═══ FIREBASE CONFIG (efast-25f96) — NEW ═══
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-fVkzumhCfVyXs7TUEaT0SmvvvPS5I8E",
+            authDomain: "efast-25f96.firebaseapp.com",
+            databaseURL: "https://efast-25f96-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "efast-25f96",
+            storageBucket: "efast-25f96.firebasestorage.app",
+            messagingSenderId: "741534475360",
+            appId: "1:741534475360:web:ace117b7f90d927fa3cf05",
+            measurementId: "G-W1WJ5PVTPK"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        let userId = null;
+        let userName = 'User';
+        let userPhone = '';
+        let allProducts = [];
+        let currentCategory = 'all';
+        let currentType = 'all';
+        let currentSearch = '';
+        let selectedProduct = null;
+        let uploadedImageUrl = '';
+
+        // ─── XSS Protection ───
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
+        // ─── Platform Config ───
+        const CATEGORIES = [
+            { name: 'Gmail', icon: 'fa-envelope', color: '#ea4335', bg: '#fef2f2' },
+            { name: 'YouTube', icon: 'fa-brands fa-youtube', color: '#ff0000', bg: '#fef2f2' },
+            { name: 'Facebook', icon: 'fa-brands fa-facebook', color: '#1877f2', bg: '#eff6ff' },
+            { name: 'Instagram', icon: 'fa-brands fa-instagram', color: '#e1306c', bg: '#fdf2f8' },
+            { name: 'TikTok', icon: 'fa-brands fa-tiktok', color: '#000000', bg: '#f3f4f6' },
+            { name: 'Website', icon: 'fa-globe', color: '#10b981', bg: '#d1fae5' },
+            { name: 'Mobile App', icon: 'fa-mobile-screen-button', color: '#7c3aed', bg: '#f5f3ff' },
+            { name: 'Other', icon: 'fa-box', color: '#6b7280', bg: '#f3f4f6' }
+        ];
+
+        // ─── Platform icon lookup ───
+        function getPlatformInfo(name) {
+            const found = CATEGORIES.find(c => c.name.toLowerCase() === (name || '').toLowerCase());
+            return found || CATEGORIES[CATEGORIES.length - 1];
+        }
+
+        // ─── AUTH GUARD ───
+        auth.onAuthStateChanged((user) => {
+            if (!user) { window.location.replace('login-signup.html'); return; }
+            userId = user.uid;
+
+            db.ref('users/' + userId).on('value', (snap) => {
+                const u = snap.val() || {};
+                userName = u.userName || u.name || 'User';
+                userPhone = u.userPhone || u.phone || '';
+            });
+
+            renderCategories();
+            loadProducts();
+            loadStats();
+        });
+
+        // ─── STATS ───
+        function loadStats() {
+            db.ref('marketplaceProducts').on('value', (snap) => {
+                const products = Object.values(snap.val() || {});
+                document.getElementById('statProducts').innerText = products.length + '+';
+                const uniqueSellers = new Set(products.map(p => p.sellerUid).filter(Boolean));
+                document.getElementById('statSellers').innerText = uniqueSellers.size + '+';
+            });
+        }
+
+        // ─── CATEGORIES ───
+        function renderCategories() {
+            const grid = document.getElementById('catGrid');
+            grid.innerHTML = CATEGORIES.map(c => `
+                <div class="cat-card" data-cat="${c.name}" onclick="filterCategory('${c.name}')">
+                    <span class="cat-count" id="count-${c.name.replace(/[^a-zA-Z0-9]/g,'')}" style="display:none;">0</span>
+                    <div class="cat-icon" style="background:${c.bg};color:${c.color};">
+                        <i class="${c.icon.startsWith('fa-brands') ? c.icon : 'fas ' + c.icon}"></i>
+                    </div>
+                    <h4>${c.name}</h4>
+                    <p>Browse</p>
+                </div>
+            `).join('');
+            updateCategoryCounts();
+        }
+
+        function updateCategoryCounts() {
+            CATEGORIES.forEach(c => {
+                const count = allProducts.filter(p => (p.category || '').toLowerCase() === c.name.toLowerCase()).length;
+                const el = document.getElementById('count-' + c.name.replace(/[^a-zA-Z0-9]/g,''));
+                if (el) {
+                    el.textContent = count;
+                    el.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            });
+        }
+
+        function filterCategory(cat) {
+            currentCategory = (currentCategory === cat) ? 'all' : cat;
+            document.querySelectorAll('.cat-card').forEach(card => {
+                if (card.getAttribute('data-cat') === currentCategory) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+            renderProducts();
+            document.querySelector('#productGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function filterType(type, btn) {
+            currentType = type;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderProducts();
+        }
+
+        function handleSearch() {
+            currentSearch = document.getElementById('searchInput').value;
+            renderProducts();
+        }
+
+        // ─── LOAD PRODUCTS ───
+        function loadProducts() {
+            db.ref('marketplaceProducts').on('value', (snap) => {
+                allProducts = [];
+                snap.forEach(child => {
+                    allProducts.push({ id: child.key, ...child.val() });
+                });
+                allProducts.sort((a, b) => (b.postedAt || 0) - (a.postedAt || 0));
+                renderProducts();
+                updateCategoryCounts();
+            });
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            let filtered = allProducts;
+
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(p => (p.category || '').toLowerCase() === currentCategory.toLowerCase());
+            }
+            if (currentType !== 'all') {
+                filtered = filtered.filter(p => (p.type || p.condition || '').toLowerCase() === currentType.toLowerCase());
+            }
+            if (currentSearch.trim() !== '') {
+                const q = currentSearch.toLowerCase();
+                filtered = filtered.filter(p => 
+                    (p.title || '').toLowerCase().includes(q) || 
+                    (p.description || '').toLowerCase().includes(q) ||
+                    (p.category || '').toLowerCase().includes(q)
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-box-open"></i>
+                        <p>No listings found</p>
+                        <p style="font-size: 13px; font-weight: 500; margin-top: 6px;">Be the first to sell a digital asset!</p>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const isOwn = p.sellerUid === userId;
+                const platform = getPlatformInfo(p.category);
+                const sellerName = p.sellerName || 'User';
+                const avatarLetter = (sellerName && sellerName.length) ? sellerName[0].toUpperCase() : 'U';
+
+                // ─── Feature badges ───
+                const badges = [];
+                if (p.features && p.features.aged) badges.push('<span class="mini-badge badge-aged">Aged</span>');
+                if (p.features && p.features.monetized) badges.push('<span class="mini-badge badge-monetized">Monetized</span>');
+                if (p.features && p.features.verified) badges.push('<span class="mini-badge badge-verified">Verified</span>');
+                if (!badges.length && p.type) badges.push(`<span class="mini-badge" style="background:#e0e7ff;color:#3730a3;">${escapeHtml(p.type)}</span>`);
+
+                const imageHtml = p.imageUrl 
+                    ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.title)}" loading="lazy" />`
+                    : `<i class="${platform.icon.startsWith('fa-brands') ? platform.icon : 'fas ' + platform.icon} placeholder-icon" style="color:${platform.color};opacity:0.4;"></i>`;
+
+                return `
+                    <div class="product-card" onclick="openProductDetail('${escapeHtml(p.id)}')">
+                        <div class="product-image">
+                            ${imageHtml}
+                            <span class="product-platform" style="color: ${platform.color};">
+                                <i class="${platform.icon.startsWith('fa-brands') ? platform.icon : 'fas ' + platform.icon}" style="font-size:9px;"></i>
+                                ${escapeHtml(p.category || 'Other')}
+                            </span>
+                            ${isOwn ? `<button class="product-delete-btn" onclick="deleteMyProduct(event, '${escapeHtml(p.id)}')" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                        <div class="product-body">
+                            <h4>${escapeHtml(p.title || 'Untitled')}</h4>
+                            <div class="product-badges">${badges.join('')}</div>
+                            <div class="product-footer">
+                                <div class="product-price">৳${(p.price || 0).toLocaleString()}</div>
+                                <div class="product-seller">
+                                    <div class="seller-avatar-mini">${avatarLetter}</div>
+                                    <span>${escapeHtml(sellerName.length > 7 ? sellerName.substring(0, 7) + '…' : sellerName)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ─── POST PRODUCT ───
+        function openPostProductModal() {
+            document.getElementById('pp-title').value = '';
+            document.getElementById('pp-desc').value = '';
+            document.getElementById('pp-price').value = '';
+            document.getElementById('pp-location').value = '';
+            document.getElementById('pp-phone').value = userPhone || '';
+            document.getElementById('pp-image').value = '';
+            document.getElementById('pp-image-preview').style.display = 'none';
+            document.getElementById('pp-preview-img').src = '';
+            document.getElementById('pp-feat-aged').checked = false;
+            document.getElementById('pp-feat-monetized').checked = false;
+            document.getElementById('pp-feat-verified').checked = false;
+            uploadedImageUrl = '';
+            openModal('postProductModal');
+        }
+
+        function previewProductImage(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            
+            if (file.size > 3 * 1024 * 1024) {
+                alert('⚠️ Image must be under 3MB.');
+                input.value = '';
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                alert('⚠️ Please select a valid image file.');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('pp-preview-img').src = e.target.result;
+                document.getElementById('pp-image-preview').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeProductImage(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('pp-image').value = '';
+            document.getElementById('pp-image-preview').style.display = 'none';
+            document.getElementById('pp-preview-img').src = '';
+            uploadedImageUrl = '';
+        }
+
+        async function submitProduct() {
+            const title = document.getElementById('pp-title').value.trim();
+            const category = document.getElementById('pp-category').value;
+            const type = document.getElementById('pp-condition').value;
+            const desc = document.getElementById('pp-desc').value.trim();
+            const price = parseFloat(document.getElementById('pp-price').value) || 0;
+            const accountAge = document.getElementById('pp-location').value.trim();
+            const phone = document.getElementById('pp-phone').value.trim();
+            const featAged = document.getElementById('pp-feat-aged').checked;
+            const featMonetized = document.getElementById('pp-feat-monetized').checked;
+            const featVerified = document.getElementById('pp-feat-verified').checked;
+            const fileInput = document.getElementById('pp-image');
+            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+
+            // ─── Validation ───
+            if (title.length < 5 || title.length > 80) {
+                alert('⚠️ Title must be 5-80 characters.');
+                return;
+            }
+            if (desc.length < 20 || desc.length > 1000) {
+                alert('⚠️ Description must be 20-1000 characters.');
+                return;
+            }
+            if (price < 1 || price > 10000000) {
+                alert('⚠️ Price must be between ৳1 and ৳1,00,00,000.');
+                return;
+            }
+            if (accountAge.length < 2 || accountAge.length > 30) {
+                alert('⚠️ Account age must be 2-30 characters (e.g. "3 Years").');
+                return;
+            }
+            if (!/^01[3-9]\d{8}$/.test(phone)) {
+                alert('⚠️ Invalid contact number (01XXXXXXXXX).');
+                return;
+            }
+
+            const btn = document.getElementById('pp-submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Publishing...';
+
+            try {
+                // ─── Upload image if exists ───
+                if (file) {
+                    btn.textContent = 'Uploading screenshot...';
+                    const timestamp = Date.now();
+                    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const storageRef = storage.ref(`marketplace/${userId}/${timestamp}_${safeName}`);
+                    const snap = await storageRef.put(file);
+                    uploadedImageUrl = await snap.ref.getDownloadURL();
+                }
+
+                btn.textContent = 'Publishing...';
+
+                // ─── Push product ───
+                await db.ref('marketplaceProducts').push({
+                    title, 
+                    category, 
+                    type,
+                    condition: type,
+                    description: desc,
+                    price, 
+                    accountAge,
+                    location: accountAge,
+                    phone,
+                    features: {
+                        aged: featAged,
+                        monetized: featMonetized,
+                        verified: featVerified
+                    },
+                    imageUrl: uploadedImageUrl || '',
+                    sellerUid: userId,
+                    sellerName: userName,
+                    sellerPhone: userPhone || phone,
+                    status: 'active',
+                    postedAt: Date.now()
+                });
+
+                // ─── Notify admins ───
+                try {
+                    const adminsSnap = await db.ref('admins').once('value');
+                    const admins = adminsSnap.val() || {};
+                    const promises = Object.keys(admins).map(adminUid =>
+                        db.ref('notifications/' + adminUid).push({
+                            title: '🛒 New Marketplace Listing',
+                            message: `${userName} listed: "${title}" for ৳${price}`,
+                            type: 'marketplace_listing',
+                            sentAt: Date.now(),
+                            read: false
+                        })
+                    );
+                    await Promise.all(promises);
+                } catch (nErr) { console.warn('Admin notify failed:', nErr); }
+
+                alert('✅ Listing published successfully!');
+                closeModal('postProductModal');
+                loadProducts();
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Publish Listing';
+            }
+        }
+
+        // ─── PRODUCT DETAIL ───
+        function openProductDetail(productId) {
+            const p = allProducts.find(x => x.id === productId);
+            if (!p) { alert('❌ Listing not found.'); return; }
+            selectedProduct = p;
+            const isOwn = p.sellerUid === userId;
+            const platform = getPlatformInfo(p.category);
+            const sellerName = p.sellerName || 'User';
+            const avatarLetter = (sellerName && sellerName.length) ? sellerName[0].toUpperCase() : 'U';
+            const postedDate = p.postedAt ? new Date(p.postedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently';
+
+            const imageHtml = p.imageUrl 
+                ? `<img src="${escapeHtml(p.imageUrl)}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 14px;" />`
+                : `<div style="width: 100%; height: 200px; background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 60px;">
+                    <i class="${platform.icon.startsWith('fa-brands') ? platform.icon : 'fas ' + platform.icon}" style="color: ${platform.color}; opacity: 0.5;"></i>
+                </div>`;
+
+            // ─── Features list ───
+            const featuresHtml = p.features ? `
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+                    ${p.features.aged ? '<span class="mini-badge badge-aged" style="font-size:11px; padding:5px 12px;">🕰️ Aged Account</span>' : ''}
+                    ${p.features.monetized ? '<span class="mini-badge badge-monetized" style="font-size:11px; padding:5px 12px;">💰 Monetized</span>' : ''}
+                    ${p.features.verified ? '<span class="mini-badge badge-verified" style="font-size:11px; padding:5px 12px;">✅ Verified</span>' : ''}
+                </div>
+            ` : '';
+
+            document.getElementById('productDetailBody').innerHTML = `
+                <div style="margin-bottom: 14px;">
+                    ${imageHtml}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: ${platform.bg}; color: ${platform.color}; border-radius: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
+                        <i class="${platform.icon.startsWith('fa-brands') ? platform.icon : 'fas ' + platform.icon}" style="font-size: 10px;"></i>
+                        ${escapeHtml(p.category || 'Other')}
+                    </span>
+                    <span style="font-size: 11px; color: var(--muted); font-weight: 700;">${postedDate}</span>
+                </div>
+
+                <h2 style="margin: 0 0 10px; font-size: 18px; font-weight: 900; line-height: 1.3;">${escapeHtml(p.title || 'Listing')}</h2>
+
+                ${featuresHtml}
+
+                <div style="margin-bottom: 14px; padding: 14px; background: var(--primary-light); border-radius: 12px;">
+                    <div style="font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Price</div>
+                    <div style="font-size: 28px; font-weight: 900; color: var(--primary); line-height: 1;">৳${(p.price || 0).toLocaleString()}</div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                    <div style="flex: 1; padding: 12px; background: #f8fafc; border-radius: 10px;">
+                        <div style="font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Account Age</div>
+                        <div style="font-size: 14px; font-weight: 800;">${escapeHtml(p.accountAge || p.location || 'N/A')}</div>
+                    </div>
+                    <div style="flex: 1; padding: 12px; background: #f8fafc; border-radius: 10px;">
+                        <div style="font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Type</div>
+                        <div style="font-size: 14px; font-weight: 800;">${escapeHtml(p.type || p.condition || 'Standard')}</div>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Seller</div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #a78bfa); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">
+                            ${avatarLetter}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 800; font-size: 14px;">${escapeHtml(sellerName)}</div>
+                            <div style="font-size: 11.5px; color: var(--muted); font-weight: 600;">Member • Verified</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <div class="form-label">Details</div>
+                    <p style="font-size: 13.5px; line-height: 1.65; color: #4f5f76; white-space: pre-wrap;">${escapeHtml(p.description || '')}</p>
+                </div>
+
+                <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 12px; margin-bottom: 4px;">
+                    <p style="font-size: 11px; color: #92400e; line-height: 1.5;">
+                        <strong>⚠️ Safety Tip:</strong> Never share OTP or personal info. Deal through trusted methods only.
+                    </p>
+                </div>
+            `;
+
+            // Contact button
+            const btn = document.getElementById('contactSellerBtn');
+            if (isOwn) {
+                btn.disabled = true;
+                btn.textContent = 'Your Own Listing';
+                btn.style.background = '#cbd5e1';
+            } else if (!p.sellerUid) {
+                btn.disabled = true;
+                btn.textContent = 'Seller Not Available';
+                btn.style.background = '#cbd5e1';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Contact Seller';
+                btn.style.background = '';
+            }
+
+            openModal('productDetailModal');
+        }
+
+        // ─── CONTACT SELLER ───
+        async function contactSeller() {
+            if (!selectedProduct) return;
+            if (!selectedProduct.sellerUid) {
+                alert('❌ This seller cannot be contacted.');
+                return;
+            }
+            if (selectedProduct.sellerUid === userId) {
+                alert('❌ This is your own listing!');
+                return;
+            }
+
+            // Show contact info with actions
+            const phone = selectedProduct.phone || selectedProduct.sellerPhone || '';
+            if (!phone) {
+                alert('❌ Seller contact not available.');
+                return;
+            }
+
+            openModal('contactInfoModal');
+            document.getElementById('contactPhone').textContent = phone;
+            document.getElementById('contactWhatsApp').href = 'https://wa.me/88' + phone.replace(/[^0-9]/g, '');
+            document.getElementById('contactCall').href = 'tel:+88' + phone.replace(/[^0-9]/g, '');
+        }
+
+        // ─── DELETE OWN PRODUCT ───
+        async function deleteMyProduct(event, productId) {
+            event.stopPropagation();
+            if (!confirm('Delete this listing?')) return;
+
+            try {
+                const snap = await db.ref('marketplaceProducts/' + productId).once('value');
+                const p = snap.val() || {};
+                if (p.sellerUid !== userId) {
+                    alert('❌ You can only delete your own listings.');
+                    return;
+                }
+
+                if (p.imageUrl) {
+                    try {
+                        const imgRef = storage.refFromURL(p.imageUrl);
+                        await imgRef.delete();
+                    } catch (imgErr) {
+                        console.warn('Image delete failed (ignored):', imgErr);
+                    }
+                }
+
+                await db.ref('marketplaceProducts/' + productId).remove();
+                alert('✅ Listing deleted.');
+            } catch (e) {
+                console.error(e);
+                alert('❌ Error: ' + e.message);
+            }
+        }
+
+        // ─── MODAL HELPERS ───
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) m.classList.remove('open');
+            });
+        });
+
+        document.getElementById('pp-phone').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+    </script>
+
+    <!-- CONTACT INFO MODAL -->
+    <div id="contactInfoModal" class="modal">
+        <div class="modal-content">
+            <h2 style="text-align:center;">Contact Seller</h2>
+            <p class="sub" style="text-align:center;">Choose how you want to reach them</p>
+
+            <div style="background: var(--primary-light); border-radius: 14px; padding: 18px; margin-bottom: 18px; text-align: center;">
+                <div style="font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Phone Number</div>
+                <div id="contactPhone" style="font-size: 22px; font-weight: 900; color: var(--primary); letter-spacing: 1px;">—</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a id="contactWhatsApp" href="#" target="_blank" class="btn-submit" style="background: #25d366; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;">
+                    <i class="fab fa-whatsapp" style="font-size: 18px;"></i> Message on WhatsApp
+                </a>
+                <a id="contactCall" href="#" class="btn-submit" style="background: #3b82f6; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;">
+                    <i class="fas fa-phone"></i> Call Seller
+                </a>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('contactInfoModal')" style="flex: 1;">Close</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

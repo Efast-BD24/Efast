@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#030712" />
+    <title>Deposit - Efast</title>
+
+    <!-- 🛡️ VPN + Network Guard (সমস্যা হলে কমেন্ট রাখুন) -->
+    <!-- <script src="guard.js"></script> -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: #030712; 
+            color: white; 
+            font-family: 'Outfit', sans-serif; 
+            overflow-x: hidden; 
+            min-height: 100vh; 
+            -webkit-overflow-scrolling: touch; 
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%; right: -20%;
+            width: 70%; height: 70%;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.12) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -20%; left: -20%;
+            width: 70%; height: 70%;
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.12) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glass { 
+            background: rgba(255, 255, 255, 0.035); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+        }
+        .premium-gradient { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); }
+        .blue-gradient { background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%); }
+        
+        /* ─── Amount quick buttons ─── */
+        .amt-btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #e5e7eb;
+        }
+        .amt-btn:hover, .amt-btn.active {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: #10b981;
+            color: #34d399;
+            transform: translateY(-1px);
+        }
+
+        /* ─── Payment method card ─── */
+        .method-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+        .method-card:hover { background: rgba(255,255,255,0.06); }
+        .method-card.active {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.08);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+        .method-card.active::before {
+            content: '✓';
+            position: absolute;
+            top: 8px; right: 12px;
+            color: #10b981;
+            font-weight: 900;
+            font-size: 16px;
+        }
+        .method-logo { 
+            width: 46px; height: 46px; 
+            border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .method-info { flex: 1; }
+        .method-info .name { font-size: 15px; font-weight: 800; }
+        .method-info .num { font-size: 13px; color: #34d399; font-weight: 700; letter-spacing: 0.5px; }
+
+        /* ─── Input field ─── */
+        .field-label {
+            display: block;
+            font-size: 11px;
+            color: #9ca3af;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+        .field-input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .field-input:focus { 
+            border-color: #10b981; 
+            background: rgba(0,0,0,0.5);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+        }
+        .field-input::placeholder { color: #4b5563; font-weight: 500; }
+
+        /* ─── Copy button ─── */
+        .copy-btn {
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .copy-btn:hover { background: rgba(16, 185, 129, 0.25); }
+        .copy-btn:active { transform: scale(0.95); }
+
+        /* ─── Step indicator ─── */
+        .step {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            align-items: flex-start;
+        }
+        .step-num {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        .step-text { font-size: 13.5px; color: #d1d5db; line-height: 1.5; font-weight: 500; }
+
+        /* ─── Submit button ─── */
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            border: none;
+            color: white;
+            font-size: 15px;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px;
+            box-shadow: 0 12px 28px rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(16, 185, 129, 0.4); }
+        .submit-btn:active:not(:disabled) { transform: translateY(0); }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ─── Toast ─── */
+        #toast-container {
+            position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%; max-width: 400px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 14px 18px;
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            margin-bottom: 10px;
+            animation: slideDown 0.3s ease-out;
+            pointer-events: auto;
+        }
+        .toast i { font-size: 18px; }
+        .toast-success { border-left: 3px solid #34d399; }
+        .toast-success i { color: #34d399; }
+        .toast-error { border-left: 3px solid #f87171; }
+        .toast-error i { color: #f87171; }
+        .toast-info { border-left: 3px solid #60a5fa; }
+        .toast-info i { color: #60a5fa; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── Loader ─── */
+        #loader {
+            display: flex; position: fixed; inset: 0;
+            background: #030712; z-index: 999;
+            align-items: center; justify-content: center;
+            flex-direction: column; gap: 12px;
+        }
+        #loader.hidden { display: none; }
+
+        /* ─── Success Modal ─── */
+        .modal {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center; justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(8px);
+        }
+        .modal.open { display: flex; }
+        .modal-card {
+            background: rgba(20, 25, 40, 0.98);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 30px 24px;
+            width: 100%; max-width: 380px;
+            text-align: center;
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* ─── History item ─── */
+        .dep-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        .dep-history-item:last-child { margin-bottom: 0; }
+
+        /* ─── Live dot ─── */
+        .live-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    </style>
+</head>
+<body>
+
+    <!-- Loader -->
+    <div id="loader">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+        <span style="color: #6b7280; font-size: 14px; letter-spacing: 2px;">LOADING</span>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast-container"></div>
+
+    <!-- MAIN -->
+    <div id="main-app" class="hidden pb-8 relative z-10">
+
+        <!-- HEADER -->
+        <header class="p-5 flex items-center gap-3 sticky top-0 z-40" style="background: rgba(3,7,18,0.85); backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <button onclick="window.location.href='index.html'" class="w-10 h-10 rounded-xl glass flex items-center justify-center text-emerald-400">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1 class="text-lg font-black italic text-emerald-400">Add Money</h1>
+                <p style="font-size: 10px; color: #6b7280; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Deposit to Wallet</p>
+            </div>
+            <div class="ml-auto glass px-3 py-2 rounded-xl flex items-center gap-2 border border-emerald-500/30">
+                <i class="fas fa-wallet text-emerald-400" style="font-size: 13px;"></i>
+                <span id="header-balance" class="font-black text-emerald-400" style="font-size: 14px;">0</span>
+            </div>
+        </header>
+
+        <main class="px-5 pt-5">
+
+            <!-- CURRENT BALANCE CARD -->
+            <div class="premium-gradient p-6 rounded-[2rem] mb-5 shadow-xl relative overflow-hidden">
+                <div style="position: absolute; top: -30px; right: -30px; width: 130px; height: 130px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: absolute; bottom: -40px; left: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <p style="font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Current Balance</p>
+                    <h2 style="font-size: 42px; font-weight: 900; margin-top: 6px; letter-spacing: -1px;">৳ <span id="card-balance">0</span></h2>
+                    <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 8px; font-weight: 600;">
+                        <i class="fas fa-shield-halved"></i> 100% Secure Payment
+                    </p>
+                </div>
+            </div>
+
+            <!-- STEP 1: SELECT PAYMENT METHOD -->
+            <div class="glass p-5 rounded-[2rem] mb-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black" style="font-size: 13px;">1</div>
+                    <h3 style="font-size: 15px; font-weight: 800;">Select Payment Method</h3>
+                </div>
+                <div id="methodList" class="space-y-3">
+                    <div class="text-center py-6" style="color: #6b7280; font-size: 13px;">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading methods...
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: PAYMENT INSTRUCTIONS -->
+            <div id="instructionsBox" class="glass p-5 rounded-[2rem] mb-4 hidden">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black" style="font-size: 13px;">2</div>
+                    <h3 style="font-size: 15px; font-weight: 800;">Send Money</h3>
+                </div>
+
+                <!-- Send Money Number Card -->
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1.5px dashed rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                    <p style="font-size: 10px; color: #6b7280; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Send Money To</p>
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                            <p id="pm-name-display" style="font-size: 14px; font-weight: 800; color: #d1d5db;">—</p>
+                            <p id="pm-number-display" style="font-size: 22px; font-weight: 900; color: #34d399; letter-spacing: 1px; margin-top: 2px;">—</p>
+                        </div>
+                        <button class="copy-btn" onclick="copyNumber()">
+                            <i class="fas fa-copy"></i> COPY
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Steps -->
+                <div>
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div class="step-text">Open <strong id="step-app-name">bKash</strong> app on your phone</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div class="step-text">Tap on <strong>"Send Money"</strong> option</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div class="step-text">Enter the number shown above & send your desired amount</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">4</div>
+                        <div class="step-text">After successful payment, copy the <strong>Transaction ID (TrxID)</strong> from the SMS</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">5</div>
+                        <div class="step-text">Fill in the form below with accurate details</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: DEPOSIT FORM -->
+            <div class="glass p-5 rounded-[2rem] mb-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black" style="font-size: 13px;">3</div>
+                    <h3 style="font-size: 15px; font-weight: 800;">Submit Payment Details</h3>
+                </div>
+
+                <!-- Amount -->
+                <div class="mb-5">
+                    <label class="field-label">Deposit Amount (৳)</label>
+                    <input type="number" id="deposit-amount" class="field-input" placeholder="Enter amount (Min ৳20)" min="20" max="100000" />
+                    <p class="mt-2" style="font-size: 10.5px; color: #6b7280;">Minimum deposit: ৳<span id="min-dep-text">20</span></p>
+                    <div class="grid grid-cols-4 gap-2 mt-3">
+                        <button class="amt-btn" onclick="setAmount(50)">৳50</button>
+                        <button class="amt-btn" onclick="setAmount(100)">৳100</button>
+                        <button class="amt-btn" onclick="setAmount(500)">৳500</button>
+                        <button class="amt-btn" onclick="setAmount(1000)">৳1000</button>
+                    </div>
+                </div>
+
+                <!-- Sender number -->
+                <div class="mb-5">
+                    <label class="field-label">Your Sender Number</label>
+                    <input type="tel" id="sender-number" class="field-input" placeholder="01XXXXXXXXX" maxlength="11" />
+                    <p class="mt-2" style="font-size: 10.5px; color: #6b7280;">The number you sent money from</p>
+                </div>
+
+                <!-- Transaction ID -->
+                <div class="mb-5">
+                    <label class="field-label">Transaction ID (TrxID)</label>
+                    <input type="text" id="txn-id" class="field-input" placeholder="e.g. 8N7A2B5X9K" maxlength="30" style="text-transform: uppercase; letter-spacing: 1px;" />
+                    <p class="mt-2" style="font-size: 10.5px; color: #6b7280;">Found in your payment confirmation SMS</p>
+                </div>
+
+                <!-- Notice -->
+                <div style="background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+                    <p style="font-size: 11.5px; color: #fcd34d; line-height: 1.5;">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        <strong>Important:</strong> Wrong information will result in rejection. Double-check before submitting.
+                    </p>
+                </div>
+
+                <!-- Submit -->
+                <button id="submit-btn" class="submit-btn" onclick="submitDeposit()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Submit Deposit Request</span>
+                </button>
+            </div>
+
+            <!-- RECENT DEPOSITS -->
+            <div class="glass p-5 rounded-[2rem] mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-clock-rotate-left text-emerald-400"></i>
+                        <h3 style="font-size: 15px; font-weight: 800;">Recent Deposits</h3>
+                    </div>
+                    <span style="font-size: 10px; color: #6b7280; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                        <span class="live-dot"></span> Live
+                    </span>
+                </div>
+                <div id="history-list">
+                    <div class="text-center py-6" style="color: #6b7280; font-size: 13px;">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading...
+                    </div>
+                </div>
+            </div>
+
+            <!-- HELP NOTE -->
+            <div class="glass p-5 rounded-[2rem] mb-4" style="border-left: 4px solid #3b82f6;">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(59, 130, 246, 0.15);">
+                        <i class="fas fa-headset text-blue-400"></i>
+                    </div>
+                    <div>
+                        <p style="font-size: 13.5px; font-weight: 800; margin-bottom: 3px;">Need Help?</p>
+                        <p style="font-size: 11.5px; color: #9ca3af; line-height: 1.5;">If your deposit takes longer than expected, contact support with your Transaction ID.</p>
+                        <button onclick="window.location.href='index.html'" class="mt-2" style="font-size: 12px; color: #60a5fa; font-weight: 800; background: none; border: none; cursor: pointer;">
+                            Contact Support <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="successModal" class="modal">
+        <div class="modal-card">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background: rgba(16, 185, 129, 0.15); border: 2px solid rgba(16, 185, 129, 0.4);">
+                <i class="fas fa-check-circle text-emerald-400" style="font-size: 40px;"></i>
+            </div>
+            <h2 style="font-size: 20px; font-weight: 900; margin-bottom: 6px;">Request Submitted!</h2>
+            <p style="font-size: 13.5px; color: #9ca3af; margin-bottom: 20px; line-height: 1.5;">
+                Your deposit request has been sent to admin. It will be approved within <strong style="color: #34d399;">5 minutes to 2 hours</strong>.
+            </p>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 12px; margin-bottom: 20px;">
+                <p style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Transaction ID</p>
+                <p id="success-txn" style="font-size: 15px; font-weight: 800; color: #34d399; margin-top: 3px;">—</p>
+            </div>
+            <button onclick="closeSuccessModal()" class="submit-btn" style="box-shadow: none;">
+                <i class="fas fa-check"></i> Got it
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════ JAVASCRIPT ═══════════ -->
+    <script>
+        // ═══ FIREBASE CONFIG (efast-25f96) — NEW ═══
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-fVkzumhCfVyXs7TUEaT0SmvvvPS5I8E",
+            authDomain: "efast-25f96.firebaseapp.com",
+            databaseURL: "https://efast-25f96-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "efast-25f96",
+            storageBucket: "efast-25f96.firebasestorage.app",
+            messagingSenderId: "741534475360",
+            appId: "1:741534475360:web:ace117b7f90d927fa3cf05",
+            measurementId: "G-W1WJ5PVTPK"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        let userId = null;
+        let userBalance = 0;
+        let selectedMethod = null;      // 'bkash' | 'nagad'
+        let selectedMethodData = null;  // { number, name, active }
+        let minDeposit = 20;
+        let submitting = false;
+
+        // ─── TOAST ───
+        function toast(type, message, duration = 3500) {
+            const container = document.getElementById('toast-container');
+            const iconMap = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            const div = document.createElement('div');
+            div.className = 'toast toast-' + type;
+            div.innerHTML = '<i class="fas ' + (iconMap[type] || 'fa-circle-info') + '"></i> ' + message;
+            container.appendChild(div);
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transform = 'translateY(-15px)';
+                div.style.transition = 'all 0.3s';
+                setTimeout(() => div.remove(), 300);
+            }, duration);
+        }
+
+        function showLoader(show) {
+            const l = document.getElementById('loader');
+            if (!l) return;
+            if (show) l.classList.remove('hidden');
+            else l.classList.add('hidden');
+        }
+
+        // ─── AUTH GUARD ───
+        auth.onAuthStateChanged((user) => {
+            if (!user) { window.location.replace('login-signup.html'); return; }
+            userId = user.uid;
+
+            showLoader(false);
+            document.getElementById('main-app').classList.remove('hidden');
+
+            // Load balance
+            db.ref('users/' + userId).on('value', (snap) => {
+                const u = snap.val() || {};
+                userBalance = Number(u.balance) || 0;
+                const hb = document.getElementById('header-balance');
+                const cb = document.getElementById('card-balance');
+                if (hb) hb.textContent = userBalance.toLocaleString();
+                if (cb) cb.textContent = userBalance.toLocaleString();
+            });
+
+            // Load payment methods
+            loadPaymentMethods();
+
+            // Load recent deposits
+            loadRecentDeposits();
+
+            // Load min deposit from settings
+            db.ref('appSettings').once('value').then(snap => {
+                const s = snap.val() || {};
+                if (s.minDeposit) {
+                    minDeposit = Number(s.minDeposit);
+                    document.getElementById('min-dep-text').textContent = minDeposit;
+                    document.getElementById('deposit-amount').setAttribute('min', minDeposit);
+                }
+            });
+        });
+
+        // ─── LOAD PAYMENT METHODS ───
+        function loadPaymentMethods() {
+            db.ref('paymentMethods').on('value', (snap) => {
+                const pm = snap.val() || {};
+                const list = document.getElementById('methodList');
+                
+                const active = Object.entries(pm).filter(([key, v]) => v && v.active && v.number);
+
+                if (active.length === 0) {
+                    list.innerHTML = '<div class="text-center py-6" style="color: #f87171; font-size: 13px; font-weight: 700;">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i> No payment method available right now' +
+                        '</div>';
+                    return;
+                }
+
+                list.innerHTML = active.map(([key, m]) => {
+                    const isBkash = key === 'bkash';
+                    const logoSvg = isBkash 
+                        ? '<div style="width:100%;height:100%;background:#e2136e;display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:12px;">bKash</div>'
+                        : '<div style="width:100%;height:100%;background:#f7931e;display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:12px;">Nagad</div>';
+                    return `
+                        <div class="method-card" data-method="${key}" onclick="selectMethod('${key}')">
+                            <div class="method-logo">${logoSvg}</div>
+                            <div class="method-info">
+                                <div class="name">${escapeHtml(m.name || key.toUpperCase())}</div>
+                                <div class="num">${escapeHtml(m.number || '')}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        // ─── SELECT METHOD ───
+        function selectMethod(methodKey) {
+            selectedMethod = methodKey;
+            
+            // UI update
+            document.querySelectorAll('.method-card').forEach(card => {
+                if (card.getAttribute('data-method') === methodKey) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+
+            // Load method details
+            db.ref('paymentMethods/' + methodKey).once('value').then(snap => {
+                selectedMethodData = snap.val();
+                if (!selectedMethodData || !selectedMethodData.number) {
+                    toast('error', 'This payment method is not available.');
+                    return;
+                }
+
+                document.getElementById('pm-name-display').textContent = selectedMethodData.name || methodKey.toUpperCase();
+                document.getElementById('pm-number-display').textContent = selectedMethodData.number;
+                document.getElementById('step-app-name').textContent = selectedMethodData.name || methodKey.toUpperCase();
+                document.getElementById('instructionsBox').classList.remove('hidden');
+
+                // Scroll to instructions
+                document.getElementById('instructionsBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
+        // ─── COPY NUMBER ───
+        function copyNumber() {
+            if (!selectedMethodData || !selectedMethodData.number) return;
+            navigator.clipboard.writeText(selectedMethodData.number).then(() => {
+                toast('success', 'Number copied!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const ta = document.createElement('textarea');
+                ta.value = selectedMethodData.number;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); toast('success', 'Number copied!'); }
+                catch(e) { toast('error', 'Copy failed.'); }
+                document.body.removeChild(ta);
+            });
+        }
+
+        // ─── SET AMOUNT ───
+        function setAmount(amt) {
+            document.getElementById('deposit-amount').value = amt;
+            document.querySelectorAll('.amt-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // ─── SUBMIT DEPOSIT ───
+        async function submitDeposit() {
+            if (submitting) return;
+
+            const amount = parseFloat(document.getElementById('deposit-amount').value);
+            const senderNum = document.getElementById('sender-number').value.trim();
+            const txnId = document.getElementById('txn-id').value.trim().toUpperCase();
+
+            // ─── Validation ───
+            if (!selectedMethod) {
+                toast('error', 'Please select a payment method.');
+                return;
+            }
+            if (!selectedMethodData || !selectedMethodData.number) {
+                toast('error', 'Payment method not loaded. Refresh and try again.');
+                return;
+            }
+            if (!amount || isNaN(amount) || amount < minDeposit) {
+                toast('error', 'Minimum deposit is ৳' + minDeposit);
+                return;
+            }
+            if (amount > 100000) {
+                toast('error', 'Maximum deposit is ৳100,000');
+                return;
+            }
+            if (!senderNum) {
+                toast('error', 'Please enter your sender number.');
+                return;
+            }
+            if (!/^01[3-9]\d{8}$/.test(senderNum)) {
+                toast('error', 'Invalid sender number format (01XXXXXXXXX).');
+                return;
+            }
+            if (!txnId) {
+                toast('error', 'Please enter Transaction ID.');
+                return;
+            }
+            if (txnId.length < 4 || txnId.length > 30) {
+                toast('error', 'Transaction ID must be 4-30 characters.');
+                return;
+            }
+            if (!/^[A-Z0-9]+$/.test(txnId)) {
+                toast('error', 'Transaction ID should only contain letters and numbers.');
+                return;
+            }
+
+            submitting = true;
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Submitting...</span>';
+
+            try {
+                // ✅ Server-side re-check for duplicate TXN ID
+                const dupCheck = await db.ref('depositRequests')
+                    .orderByChild('txnId').equalTo(txnId).once('value');
+                if (dupCheck.exists()) {
+                    toast('error', 'This Transaction ID is already submitted!');
+                    submitting = false;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Submit Deposit Request</span>';
+                    return;
+                }
+
+                // ✅ Push deposit request
+                await db.ref('depositRequests').push({
+                    userId: userId,
+                    amount: amount,
+                    method: selectedMethod,
+                    senderNum: senderNum,
+                    toNumber: selectedMethodData.number,
+                    txnId: txnId,
+                    status: 'pending',
+                    submittedAt: Date.now(),
+                    date: new Date().toISOString()
+                });
+
+                // ✅ Show success modal
+                document.getElementById('success-txn').textContent = txnId;
+                document.getElementById('successModal').classList.add('open');
+
+                // Reset form
+                document.getElementById('deposit-amount').value = '';
+                document.getElementById('sender-number').value = '';
+                document.getElementById('txn-id').value = '';
+
+                toast('success', 'Deposit request submitted successfully!');
+                loadRecentDeposits();
+
+            } catch (err) {
+                console.error(err);
+                toast('error', 'Failed: ' + (err.message || 'Unknown error'));
+            } finally {
+                submitting = false;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Submit Deposit Request</span>';
+            }
+        }
+
+        // ─── CLOSE SUCCESS MODAL ───
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.remove('open');
+        }
+
+        // ─── LOAD RECENT DEPOSITS ───
+        function loadRecentDeposits() {
+            if (!userId) return;
+            const listEl = document.getElementById('history-list');
+
+            db.ref('depositRequests')
+                .orderByChild('userId').equalTo(userId)
+                .on('value', (snap) => {
+                    const items = [];
+                    snap.forEach(c => items.push(c.val()));
+                    items.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+                    const recent = items.slice(0, 8);
+
+                    if (recent.length === 0) {
+                        listEl.innerHTML = '<div class="text-center py-6" style="color: #6b7280; font-size: 13px;">' +
+                            '<i class="fas fa-inbox mr-2"></i> No deposits yet' +
+                            '</div>';
+                        return;
+                    }
+
+                    listEl.innerHTML = recent.map(d => {
+                        const statusColor = d.status === 'approved' ? '#34d399'
+                                          : d.status === 'rejected' ? '#f87171'
+                                          : '#fbbf24';
+                        const statusText = d.status === 'approved' ? '✓ Approved'
+                                         : d.status === 'rejected' ? '✕ Rejected'
+                                         : '⏳ Pending';
+                        const time = d.submittedAt 
+                            ? new Date(d.submittedAt).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                            : '—';
+                        const method = (d.method || '').toUpperCase();
+                        return `
+                            <div class="dep-history-item">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+                                        <span style="font-size: 12px; color: #6b7280; font-weight: 700;">${escapeHtml(method)}</span>
+                                        <span style="font-size: 10px; color: #4b5563;">${time}</span>
+                                    </div>
+                                    <div style="font-size: 11px; color: #6b7280; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        TrxID: ${escapeHtml(d.txnId || '—')}
+                                    </div>
+                                </div>
+                                <div style="text-align: right; margin-left: 10px;">
+                                    <div style="font-size: 14px; font-weight: 800; color: white;">৳${(d.amount || 0).toLocaleString()}</div>
+                                    <div style="font-size: 10px; color: ${statusColor}; font-weight: 800;">${statusText}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }, (err) => {
+                    console.error('loadRecentDeposits error:', err);
+                    listEl.innerHTML = '<div class="text-center py-6" style="color: #f87171; font-size: 13px;">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i> Failed to load history' +
+                        '</div>';
+                });
+        }
+
+        // ─── ESCAPE HTML (XSS protection) ───
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
+        // ─── Close modal on outside click ───
+        document.getElementById('successModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeSuccessModal();
+        });
+
+        // ─── TXN ID input: auto-uppercase ───
+        document.getElementById('txn-id').addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+
+        // ─── Sender number: only digits ───
+        document.getElementById('sender-number').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+        });
+    </script>
+</body>
+</html>

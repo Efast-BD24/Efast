@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Micro Tasks - TaskVerse</title>
+
+    <!-- 🛡️ VPN + Network Guard -->
+    <!-- <script src="guard.js"></script> -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap');
+        body { background: #030712; color: white; font-family: 'Outfit', sans-serif; }
+        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.08); }
+        .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: #6b7280; }
+        .submitted-card { opacity: 0.6; filter: grayscale(80%); border-left-color: #4b5563 !important; }
+        .submitted-btn { background-color: #374151 !important; color: #9ca3af !important; cursor: not-allowed; }
+        .full-card { opacity: 0.75; border-left-color: #ef4444 !important; }
+        .full-btn { background-color: #7f1d1d !important; color: #fca5a5 !important; cursor: not-allowed; }
+        .own-card { opacity: 0.85; border-left-color: #f59e0b !important; }
+        .own-btn { background-color: #78350f !important; color: #fde68a !important; cursor: not-allowed; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal.open { display: flex; }
+        .form-label { font-size: 10px; color: #9ca3af; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .form-control { width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; font-family: 'Outfit', sans-serif; }
+        .form-control:focus { border-color: #3b82f6; }
+        .upload-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .upload-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .live-dot { display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+        
+        .view-tab { padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s; border: none; font-family: inherit; display: flex; align-items: center; gap: 6px; }
+        .view-tab.active { background: linear-gradient(135deg, #6c63ff, #7c3aed); color: white; box-shadow: 0 8px 20px rgba(108,99,255,0.35); }
+        .view-tab:not(.active) { background: rgba(255,255,255,0.05); color: #9ca3af; }
+        .view-tab:not(.active):hover { background: rgba(255,255,255,0.08); color: white; }
+        
+        .proof-thumb { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); display: block; }
+        .proof-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+</head>
+<body class="p-5 pb-24">
+    <div class="flex items-center gap-3 mb-6">
+        <button onclick="window.location.href='index.html'" class="w-10 h-10 rounded-xl glass flex items-center justify-center text-blue-400">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 class="text-2xl font-black italic text-blue-500">TaskVerse</h1>
+        <div class="ml-auto flex items-center gap-2">
+            <span class="bg-green-600/20 text-green-400 text-[10px] font-bold px-2 py-1 rounded-full hidden sm:inline-flex items-center">
+                <span class="live-dot mr-1"></span> Connected
+            </span>
+            <button onclick="openPostJobModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+                <i class="fas fa-plus-circle mr-1"></i> Post Job
+            </button>
+        </div>
+    </div>
+
+    <div class="glass p-4 rounded-2xl mb-4 flex justify-between items-center border border-emerald-500/20">
+        <div>
+            <p class="text-[10px] text-gray-500 font-bold uppercase">Your Wallet</p>
+            <p class="text-2xl font-black text-emerald-400">৳<span id="header-balance">0</span></p>
+        </div>
+        <i class="fas fa-wallet text-emerald-500 text-3xl opacity-30"></i>
+    </div>
+
+    <!-- VIEW TABS -->
+    <div class="flex gap-2 mb-4">
+        <button id="tab-browse" class="view-tab active flex-1 justify-center" onclick="switchView('browse')">
+            <i class="fas fa-search"></i> Browse Jobs
+        </button>
+        <button id="tab-myposts" class="view-tab flex-1 justify-center" onclick="switchView('myposts')">
+            <i class="fas fa-clipboard-list"></i> My Posts
+            <span id="myposts-count" class="hidden" style="background:#ef4444;color:white;font-size:9px;font-weight:900;padding:2px 6px;border-radius:99px;margin-left:4px;">0</span>
+        </button>
+    </div>
+
+    <!-- BROWSE VIEW -->
+    <div id="browse-view">
+        <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+            <button onclick="filterCategory('all', this)" class="filter-btn active bg-purple-600 text-white px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">All</button>
+            <button onclick="filterCategory('youtube', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">▶️ YouTube</button>
+            <button onclick="filterCategory('facebook', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">📘 Facebook</button>
+            <button onclick="filterCategory('instagram', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">📸 Instagram</button>
+            <button onclick="filterCategory('tiktok', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">🎵 TikTok</button>
+            <button onclick="filterCategory('apps', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">📱 Apps</button>
+            <button onclick="filterCategory('web', this)" class="filter-btn bg-gray-800 text-gray-400 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap">🌐 Web</button>
+        </div>
+
+        <div class="mb-4">
+            <input type="text" id="searchInput" oninput="searchJobs()" placeholder="🔍 Search..." class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm outline-none focus:border-purple-500">
+        </div>
+
+        <div id="taskList" class="space-y-4">
+            <div class="loader"><i class="fas fa-spinner fa-spin mr-2"></i> Loading jobs...</div>
+        </div>
+    </div>
+
+    <!-- MY POSTS VIEW -->
+    <div id="myposts-view" class="hidden">
+        <div class="glass p-4 rounded-2xl mb-4" style="border-left: 4px solid #7c3aed;">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(124,58,237,0.15);">
+                    <i class="fas fa-broadcast-tower text-purple-400"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-bold text-sm">Live Review</p>
+                    <p class="text-[10px] text-gray-400 font-semibold">Worker proofs live update</p>
+                </div>
+                <span class="flex items-center gap-1 text-[10px] text-green-400 font-bold">
+                    <span class="live-dot"></span> LIVE
+                </span>
+            </div>
+        </div>
+
+        <div id="myPostsList" class="space-y-4">
+            <div class="loader"><i class="fas fa-spinner fa-spin mr-2"></i> Loading your posts...</div>
+        </div>
+    </div>
+
+    <!-- SUBMIT PROOF MODAL -->
+    <div id="proofModal" class="modal">
+        <div class="glass w-full max-w-sm p-6 rounded-[2rem] border border-blue-500/30 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-black mb-2 text-blue-400">Submit Proof</h3>
+            <p id="proof-job-title" class="text-xs text-gray-400 mb-4 font-bold">Task Title</p>
+            
+            <div class="mb-4">
+                <label class="form-label">Write Proof / Note (Optional)</label>
+                <textarea id="proof-text" rows="3" class="form-control" placeholder="Describe what you did..."></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Upload Screenshots (Optional, max 2MB each)</label>
+                <input type="file" id="proof-files" multiple accept="image/*" class="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm outline-none focus:border-blue-500" onchange="previewProofFiles(this)" />
+                <p class="text-[10px] text-gray-500 mt-1">You can select multiple images at once.</p>
+                <div id="proof-preview" class="upload-preview"></div>
+            </div>
+            
+            <div class="bg-black/30 p-2 rounded-lg mb-4 border border-white/5">
+                <p class="text-[10px] text-yellow-500"><i class="fas fa-info-circle"></i> You must provide at least a text or a screenshot.</p>
+            </div>
+
+            <div id="proof-status" class="hidden mb-3 text-xs"></div>
+
+            <div class="flex gap-2">
+                <button onclick="closeModal('proofModal')" class="flex-1 bg-gray-800 py-3 rounded-xl font-bold text-sm">Cancel</button>
+                <button id="proof-submit-btn" onclick="uploadAndSubmitProof()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-sm">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POST A JOB MODAL -->
+    <div id="postJobModal" class="modal">
+        <div class="glass w-full max-w-sm p-6 rounded-[2rem] border border-emerald-500/30 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-black mb-4 text-emerald-400">Post a Micro Task</h3>
+            
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" id="pj-title" class="form-control" placeholder="e.g. Subscribe my channel" maxlength="80" />
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Category</label>
+                <select id="pj-category" class="form-control">
+                    <option value="youtube">YouTube</option><option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
+                    <option value="apps">Apps</option><option value="web">Website</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Job URL</label>
+                <input type="url" id="pj-url" class="form-control" placeholder="https://youtube.com/..." />
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea id="pj-desc" rows="2" class="form-control" placeholder="Describe the task..." maxlength="500"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="form-label">Reward per worker (৳)</label>
+                    <input type="number" id="pj-reward" class="form-control" placeholder="10" min="1" oninput="updateJobCost()" />
+                </div>
+                <div>
+                    <label class="form-label">Worker Limit</label>
+                    <input type="number" id="pj-limit" class="form-control" placeholder="50" min="1" oninput="updateJobCost()" />
+                </div>
+            </div>
+            
+            <div class="bg-black/30 p-3 rounded-xl mb-4 border border-white/5">
+                <p class="text-xs text-gray-400">Total Cost: <span id="pj-cost" class="text-yellow-400 font-bold">৳0</span></p>
+                <p class="text-[10px] text-gray-500 mt-1">This amount will be deducted from your wallet.</p>
+                <p class="text-[10px] text-emerald-400 mt-1">Your Balance: ৳<span id="pj-balance">0</span></p>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="closeModal('postJobModal')" class="flex-1 bg-gray-800 py-3 rounded-xl font-bold text-sm">Cancel</button>
+                <button id="post-job-btn" onclick="submitNewJob()" class="flex-1 bg-emerald-600 py-3 rounded-xl font-bold text-sm">Post Job</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══ FIREBASE CONFIG (efast-25f96) — NEW ═══
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-fVkzumhCfVyXs7TUEaT0SmvvvPS5I8E",
+            authDomain: "efast-25f96.firebaseapp.com",
+            databaseURL: "https://efast-25f96-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "efast-25f96",
+            storageBucket: "efast-25f96.firebasestorage.app",
+            messagingSenderId: "741534475360",
+            appId: "1:741534475360:web:ace117b7f90d927fa3cf05",
+            measurementId: "G-W1WJ5PVTPK"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        // ✅ ImgBB API Key
+        const IMGBB_API_KEY = '75f62af030fc6b88501b28b5b6f14d08';
+
+        let userId = null;
+        let userBalance = 0;
+        let userName = 'User';
+        let allJobs = [];
+        let mySubmittedJobs = [];
+        let myPostedJobs = [];
+        let allSubmissions = [];
+        let currentCategory = 'all';
+        let currentSearch = '';
+        let currentJobKey = null;
+        let currentView = 'browse';
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (!user) { window.location.replace('login-signup.html'); return; }
+            userId = user.uid;
+            
+            db.ref('users/' + userId).on('value', (snap) => {
+                const u = snap.val() || {};
+                userBalance = u.balance || 0;
+                userName = u.userName || u.name || 'User';
+                const balEl = document.getElementById('header-balance');
+                if (balEl) balEl.textContent = userBalance;
+                const pjBal = document.getElementById('pj-balance');
+                if (pjBal) pjBal.textContent = userBalance;
+            });
+
+            loadJobs();
+            loadMySubmissions();
+            loadAllSubmissions();
+            loadMyPostedJobs();
+
+            setInterval(() => {
+                loadJobs();
+                loadMySubmissions();
+                loadAllSubmissions();
+                loadMyPostedJobs();
+            }, 30000);
+        });
+
+        function switchView(view) {
+            currentView = view;
+            const browseTab = document.getElementById('tab-browse');
+            const myPostsTab = document.getElementById('tab-myposts');
+            const browseView = document.getElementById('browse-view');
+            const myPostsView = document.getElementById('myposts-view');
+
+            if (view === 'browse') {
+                browseTab.classList.add('active');
+                myPostsTab.classList.remove('active');
+                browseView.classList.remove('hidden');
+                myPostsView.classList.add('hidden');
+            } else {
+                browseTab.classList.remove('active');
+                myPostsTab.classList.add('active');
+                browseView.classList.add('hidden');
+                myPostsView.classList.remove('hidden');
+            }
+        }
+
+        function loadJobs() {
+            const container = document.getElementById('taskList');
+            db.ref('jobPosts').on('value', (snap) => {
+                allJobs = [];
+                snap.forEach(child => {
+                    const t = child.val();
+                    if (t.status !== 'closed' && t.status !== 'rejected') {
+                        allJobs.push({ id: child.key, ...t });
+                    }
+                });
+                allJobs.reverse();
+                renderJobs();
+            }, (error) => {
+                container.innerHTML = `<div class="glass p-8 rounded-[2rem] text-center">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-3"></i>
+                    <p class="text-red-400">Failed to load tasks.</p>
+                    <p class="text-gray-600 text-xs mt-1">${escapeHtml(error.message)}</p>
+                </div>`;
+            });
+        }
+
+        function loadAllSubmissions() {
+            db.ref('proofSubmissions').on('value', (snap) => {
+                allSubmissions = [];
+                snap.forEach(child => {
+                    allSubmissions.push({ _key: child.key, ...child.val() });
+                });
+                allSubmissions.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+                if (currentView === 'myposts') renderMyPosts();
+            });
+        }
+
+        function loadMyPostedJobs() {
+            db.ref('jobPosts').on('value', (snap) => {
+                myPostedJobs = [];
+                snap.forEach(child => {
+                    const t = child.val();
+                    if (t.userId === userId) {
+                        myPostedJobs.push({ id: child.key, ...t });
+                    }
+                });
+                myPostedJobs.reverse();
+                renderMyPosts();
+            });
+        }
+
+        async function renderMyPosts() {
+            const container = document.getElementById('myPostsList');
+            if (!container) return;
+            
+            const pendingCount = myPostedJobs.filter(t => (t.status || 'pending') === 'pending').length;
+            const badge = document.getElementById('myposts-count');
+            if (badge) {
+                badge.textContent = pendingCount;
+                badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            }
+
+            if (myPostedJobs.length === 0) {
+                container.innerHTML = `<div class="glass p-8 rounded-[2rem] text-center">
+                    <i class="fas fa-clipboard-list text-4xl text-gray-600 mb-3"></i>
+                    <p class="text-gray-400">আপনি এখনো কোনো job post করেননি</p>
+                    <p class="text-gray-600 text-xs mt-1">উপরে "Post Job" চেপে job তৈরি করুন।</p>
+                </div>`;
+                return;
+            }
+
+            const myJobIds = myPostedJobs.map(j => j.id);
+            let submissionsForMyJobs = allSubmissions.filter(s => myJobIds.includes(s.jobKey));
+
+            let html = '';
+            
+            for (const t of myPostedJobs) {
+                const status = t.status || 'pending';
+                const slotsLeft = (t.limit || 0) - (t.done || 0);
+                const progressPct = t.limit ? Math.round(((t.done || 0) / t.limit) * 100) : 0;
+                const date = t.date || (t.submittedAt ? new Date(t.submittedAt).toLocaleDateString('en-GB') : '—');
+                const safeUrl = (t.url && t.url.startsWith('http')) ? t.url : '#';
+
+                let statusBg, statusColor, statusIcon, statusText, cardBorder;
+                if (status === 'pending') {
+                    statusBg = '#78350f'; statusColor = '#fde68a'; statusIcon = 'fa-clock'; statusText = 'PENDING'; cardBorder = '#f59e0b';
+                } else if (status === 'approved') {
+                    statusBg = '#065f46'; statusColor = '#6ee7b7'; statusIcon = 'fa-check-circle'; statusText = 'APPROVED & LIVE'; cardBorder = '#10b981';
+                } else if (status === 'rejected') {
+                    statusBg = '#7f1d1d'; statusColor = '#fca5a5'; statusIcon = 'fa-times-circle'; statusText = 'REJECTED'; cardBorder = '#ef4444';
+                } else {
+                    statusBg = '#374151'; statusColor = '#9ca3af'; statusIcon = 'fa-lock'; statusText = 'CLOSED'; cardBorder = '#4b5563';
+                }
+
+                const thisJobSubmissions = submissionsForMyJobs.filter(s => s.jobKey === t.id);
+
+                html += `
+                <div class="glass p-5 rounded-2xl" style="border-left: 4px solid ${cardBorder}; margin-bottom: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                        <span style="background:${statusBg}; color:${statusColor}; font-size:10px; font-weight:900; padding:5px 10px; border-radius:99px; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:5px;">
+                            <i class="fas ${statusIcon}"></i> ${statusText}
+                        </span>
+                        <span style="font-size:10px; color:#6b7280; font-weight:700;">${date}</span>
+                    </div>
+
+                    <h3 class="font-bold text-lg mb-2">${escapeHtml(t.title || 'Untitled Job')}</h3>
+                    <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px; font-size:11px;">
+                        <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:8px;">
+                            <div style="color:#6b7280; font-weight:700; text-transform:uppercase; font-size:9px;">Reward / worker</div>
+                            <div style="color:#34d399; font-weight:800; font-size:14px;">৳${t.reward || 0}</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:8px;">
+                            <div style="color:#6b7280; font-weight:700; text-transform:uppercase; font-size:9px;">Total Cost</div>
+                            <div style="color:#fbbf24; font-weight:800; font-size:14px;">৳${t.budget || ((t.reward || 0) * (t.limit || 0))}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:6px;">
+                            <span style="color:#9ca3af; font-weight:600;">Progress</span>
+                            <span style="color:#60a5fa; font-weight:800;">${t.done || 0}/${t.limit || 0} (${progressPct}%)</span>
+                        </div>
+                        <div style="width:100%; background:rgba(0,0,0,0.5); border-radius:99px; height:8px; overflow:hidden;">
+                            <div style="width:${progressPct}%; height:100%; background:linear-gradient(90deg, #6c63ff, #a78bfa); border-radius:99px;"></div>
+                        </div>
+                    </div>
+
+                    ${status === 'rejected' && t.rejectReason ? `
+                        <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 12px; margin-bottom:10px;">
+                            <div style="font-size:10px; color:#fca5a5; font-weight:800; text-transform:uppercase; margin-bottom:3px;">❌ Reject Reason</div>
+                            <div style="font-size:12px; color:#fecaca;">${escapeHtml(t.rejectReason)}</div>
+                        </div>
+                    ` : ''}
+
+                    ${status === 'approved' ? `
+                        <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:10px 12px; margin-bottom:10px;">
+                            <div style="font-size:11px; color:#6ee7b7; font-weight:700; display:flex; align-items:center; gap:6px;">
+                                <span class="live-dot"></span>
+                                Your job is LIVE! Workers can submit proof now.
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${status === 'pending' ? `
+                        <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:10px 12px; margin-bottom:10px;">
+                            <div style="font-size:11px; color:#fde68a; font-weight:700;">
+                                <i class="fas fa-hourglass-half mr-1"></i>
+                                Admin রিভিউ করছেন — approve হলে live হয়ে যাবে।
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${status === 'approved' ? `
+                        <div style="background:rgba(108,99,255,0.08); border:1px solid rgba(108,99,255,0.25); border-radius:12px; padding:12px; margin-bottom:10px;">
+                            <div style="font-size:11px; color:#a78bfa; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                                <i class="fas fa-users"></i> Worker Submissions (${thisJobSubmissions.length})
+                            </div>
+                            
+                            ${thisJobSubmissions.length === 0 ? `
+                                <div style="text-align:center; padding:14px; color:#6b7280; font-size:12px;">
+                                    <i class="fas fa-hourglass-half mr-1"></i> এখনো কোনো worker submit করেনি
+                                </div>
+                            ` : thisJobSubmissions.map(s => `
+                                <div style="background:rgba(0,0,0,0.35); border-radius:10px; padding:12px; margin-bottom:8px; border-left:3px solid ${s.status === 'approved' ? '#10b981' : s.status === 'rejected' ? '#ef4444' : '#f59e0b'};">
+                                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #6c63ff, #a78bfa); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:white;">
+                                                ${((s.userName || 'U')[0] || 'U').toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div style="font-size:12px; font-weight:800;">${escapeHtml(s.userName || 'Worker')}</div>
+                                                <div style="font-size:10px; color:#6b7280; font-family:monospace;">
+                                                    ${escapeHtml((s.userId || '').substring(0, 12))}…
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style="font-size:9px; font-weight:800; padding:3px 8px; border-radius:99px; background:${s.status === 'approved' ? '#065f46' : s.status === 'rejected' ? '#7f1d1d' : '#78350f'}; color:${s.status === 'approved' ? '#6ee7b7' : s.status === 'rejected' ? '#fca5a5' : '#fde68a'};">
+                                            ${s.status === 'approved' ? '✅ APPROVED' : s.status === 'rejected' ? '❌ REJECTED' : '⏳ PENDING'}
+                                        </span>
+                                    </div>
+                                    
+                                    ${s.proofText ? `
+                                        <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:8px; padding:8px 10px; margin-bottom:8px;">
+                                            <div style="font-size:9px; color:#60a5fa; font-weight:800; text-transform:uppercase; margin-bottom:3px;">📝 Proof Note</div>
+                                            <div style="font-size:11.5px; color:#d1d5db; white-space:pre-wrap; line-height:1.4;">${escapeHtml(s.proofText)}</div>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${s.proofUrls && s.proofUrls.length > 0 ? `
+                                        <div style="margin-bottom:8px;">
+                                            <div style="font-size:9px; color:#60a5fa; font-weight:800; text-transform:uppercase; margin-bottom:5px;">📸 Screenshots (${s.proofUrls.length})</div>
+                                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                                ${s.proofUrls.map(url => `
+                                                    <a href="${escapeAttr(url)}" target="_blank" class="proof-thumb">
+                                                        <img src="${escapeAttr(url)}" alt="proof" />
+                                                    </a>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div style="font-size:10px; color:#6b7280; margin-bottom:8px;">
+                                        <i class="fas fa-clock mr-1"></i> ${s.submittedAt ? new Date(s.submittedAt).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'}
+                                    </div>
+                                    
+                                    ${s.status === 'pending' ? `
+                                        <div style="display:flex; gap:6px;">
+                                            <button onclick="approveWorkerSubmission('${s._key}', '${s.userId}', '${t.id}', ${t.reward || 0})" style="flex:1; background:#059669; color:white; padding:8px; border-radius:8px; font-size:11px; font-weight:800; border:none; cursor:pointer;">
+                                                <i class="fas fa-check mr-1"></i> Approve & Pay ৳${t.reward || 0}
+                                            </button>
+                                            <button onclick="rejectWorkerSubmission('${s._key}', '${s.userId}')" style="flex:1; background:#991b1b; color:white; padding:8px; border-radius:8px; font-size:11px; font-weight:800; border:none; cursor:pointer;">
+                                                <i class="fas fa-times mr-1"></i> Reject
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div style="display:flex; gap:8px;">
+                        ${safeUrl !== '#' && status === 'approved' ? `
+                            <a href="${safeUrl}" target="_blank" style="flex:1; background:#3b82f6; padding:10px; border-radius:10px; text-align:center; font-size:12px; font-weight:800; color:white; text-decoration:none;">
+                                <i class="fas fa-external-link-alt mr-1"></i> Open Link
+                            </a>
+                        ` : ''}
+                        ${status === 'pending' ? `
+                            <button onclick="deleteMyPost('${escapeAttr(t.id)}', ${t.budget || 0})" style="flex:1; background:#7f1d1d; padding:10px; border-radius:10px; font-size:12px; font-weight:800; color:#fca5a5; border:none; cursor:pointer;">
+                                <i class="fas fa-trash mr-1"></i> Cancel & Refund
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // ✅ Approve worker submission and pay
+        async function approveWorkerSubmission(subKey, workerUid, jobKey, reward) {
+            if (!confirm(`Approve this worker and pay ৳${reward}?`)) return;
+            
+            try {
+                const jobSnap = await db.ref('jobPosts/' + jobKey).once('value');
+                const job = jobSnap.val() || {};
+                
+                if (job.userId !== userId) {
+                    alert('❌ Only the job owner can approve.');
+                    return;
+                }
+                
+                await db.ref('jobPosts/' + jobKey).update({ done: (job.done || 0) + 1 });
+                
+                const uSnap = await db.ref('users/' + workerUid).once('value');
+                const u = uSnap.val() || {};
+                await db.ref('users/' + workerUid).update({ balance: (u.balance || 0) + reward });
+                
+                await db.ref('transactions/' + workerUid).push({
+                    type: 'Task Reward',
+                    description: `Task "${job.title}" approved +৳${reward}`,
+                    amount: reward,
+                    date: new Date().toISOString()
+                });
+                
+                await db.ref('notifications/' + workerUid).push({
+                    title: '✅ Task Approved',
+                    message: `Your proof for "${job.title}" was approved! ৳${reward} added to wallet.`,
+                    type: 'task_approved',
+                    sentAt: Date.now(),
+                    read: false
+                });
+                
+                await db.ref('proofSubmissions/' + subKey).update({
+                    status: 'approved',
+                    approvedAt: Date.now(),
+                    approvedBy: userId
+                });
+                
+                alert('✅ Approved & ৳' + reward + ' paid!');
+                loadMyPostedJobs();
+                loadAllSubmissions();
+                
+            } catch (e) {
+                console.error(e);
+                alert('❌ Error: ' + e.message);
+            }
+        }
+
+        async function rejectWorkerSubmission(subKey, workerUid) {
+            const reason = prompt('Reject reason (optional):', 'Incomplete proof');
+            if (reason === null) return;
+            
+            try {
+                await db.ref('proofSubmissions/' + subKey).update({
+                    status: 'rejected',
+                    rejectReason: reason || 'Not valid',
+                    rejectedAt: Date.now()
+                });
+                
+                await db.ref('notifications/' + workerUid).push({
+                    title: '❌ Task Rejected',
+                    message: `Your proof was rejected. Reason: ${reason || 'Not valid'}`,
+                    type: 'task_rejected',
+                    sentAt: Date.now(),
+                    read: false
+                });
+                
+                alert('✅ Rejected.');
+                loadMyPostedJobs();
+                loadAllSubmissions();
+                
+            } catch (e) {
+                console.error(e);
+                alert('❌ Error: ' + e.message);
+            }
+        }
+
+        async function deleteMyPost(jobKey, refundAmount) {
+            if (!confirm(`Cancel this job and get ৳${refundAmount} refund?`)) return;
+
+            try {
+                const jobSnap = await db.ref('jobPosts/' + jobKey).once('value');
+                const job = jobSnap.val() || {};
+                if (job.userId !== userId) { alert('❌ Not your job.'); return; }
+                if (job.status !== 'pending') { alert('❌ Only pending jobs can be cancelled.'); return; }
+
+                const uSnap = await db.ref('users/' + userId).once('value');
+                const u = uSnap.val() || {};
+                await db.ref('users/' + userId).update({ balance: (u.balance || 0) + refundAmount });
+
+                await db.ref('transactions/' + userId).push({
+                    type: 'Job Refund',
+                    description: `Cancelled own job +৳${refundAmount}`,
+                    amount: refundAmount,
+                    date: new Date().toISOString()
+                });
+
+                await db.ref('jobPosts/' + jobKey).remove();
+
+                alert('✅ Job cancelled & ৳' + refundAmount + ' refunded!');
+            } catch (e) {
+                alert('❌ Error: ' + e.message);
+            }
+        }
+
+        function loadMySubmissions() {
+            db.ref('proofSubmissions').on('value', (snap) => {
+                mySubmittedJobs = [];
+                snap.forEach(child => {
+                    const sub = child.val();
+                    if (sub.userId === userId && sub.status !== 'rejected') {
+                        mySubmittedJobs.push(sub.jobKey);
+                    }
+                });
+                renderJobs();
+            });
+        }
+
+        function renderJobs() {
+            const container = document.getElementById('taskList');
+            let filtered = allJobs;
+
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(t => (t.category || '').toLowerCase() === currentCategory);
+            }
+            if (currentSearch.trim() !== '') {
+                const q = currentSearch.toLowerCase();
+                filtered = filtered.filter(t => (t.title || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="glass p-8 rounded-[2rem] text-center">
+                    <i class="fas fa-inbox text-4xl text-gray-600 mb-3"></i>
+                    <p class="text-gray-400">কোনো job নেই</p>
+                    <p class="text-gray-600 text-xs mt-1">এখনো কোনো job post করা হয়নি।</p>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(t => {
+                const isOwnJob = t.userId === userId;
+                const isSubmitted = mySubmittedJobs.includes(t.id);
+                const isPending = t.status === 'pending';
+                const slotsLeft = (t.limit || 0) - (t.done || 0);
+                const isFull = slotsLeft <= 0;
+                const safeTitle = escapeAttr(t.title || '');
+                const safeUrl = (t.url && t.url.startsWith('http')) ? t.url : '#';
+
+                let statusBadge = '';
+                if (isPending) statusBadge = '<span style="background:#92400e;color:#fde68a;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px;margin-left:4px;">⏳ PENDING</span>';
+                else if (isFull) statusBadge = '<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px;margin-left:4px;">❌ FULL</span>';
+
+                if (isOwnJob) {
+                    return `
+                    <div class="glass p-5 rounded-2xl border-l-4 own-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg flex-1">${escapeHtml(t.title || 'Task')}${statusBadge}</h3>
+                            <span class="bg-amber-600/20 text-amber-400 text-xs font-bold px-3 py-1 rounded-full">৳${t.reward || 0}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+                        <div class="flex justify-between items-center mb-3 text-xs">
+                            <span class="text-gray-500">📊 ${t.done || 0}/${t.limit || 0} done</span>
+                            <span class="text-amber-400 font-bold">⚡ ${slotsLeft} slots left</span>
+                        </div>
+                        <button onclick="switchView('myposts')" class="w-full py-3 rounded-xl text-center font-bold text-sm" style="background:#7c3aed;color:white;border:none;cursor:pointer;">
+                            <i class="fas fa-eye mr-1"></i> View in My Posts
+                        </button>
+                    </div>`;
+                }
+
+                if (isSubmitted) {
+                    return `
+                    <div class="glass p-5 rounded-2xl border-l-4 submitted-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg flex-1">${escapeHtml(t.title || 'Task')}</h3>
+                            <span class="bg-green-600/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full">৳${t.reward || 0}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+                        <button disabled class="w-full py-3 rounded-xl text-center font-bold text-sm submitted-btn">
+                            <i class="fas fa-check-double mr-1"></i> Already Submitted
+                        </button>
+                    </div>`;
+                }
+
+                if (isPending) {
+                    return `
+                    <div class="glass p-5 rounded-2xl border-l-4" style="border-left-color: #f59e0b;">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg flex-1">${escapeHtml(t.title || 'Task')}${statusBadge}</h3>
+                            <span class="bg-amber-600/20 text-amber-400 text-xs font-bold px-3 py-1 rounded-full">৳${t.reward || 0}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+                        <div class="flex justify-between items-center mb-3 text-xs">
+                            <span class="text-gray-500">📊 ${t.done || 0}/${t.limit || 0} done</span>
+                            <span class="text-yellow-400 font-bold">⏳ Waiting approval</span>
+                        </div>
+                        <button disabled class="w-full py-3 rounded-xl text-center font-bold text-sm" style="background:#78350f;color:#fde68a;cursor:not-allowed;">
+                            <i class="fas fa-clock mr-1"></i> Pending Admin Approval
+                        </button>
+                    </div>`;
+                }
+
+                if (isFull) {
+                    return `
+                    <div class="glass p-5 rounded-2xl border-l-4 full-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg flex-1">${escapeHtml(t.title || 'Task')}${statusBadge}</h3>
+                            <span class="bg-green-600/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full">৳${t.reward || 0}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+                        <div class="flex justify-between items-center mb-3 text-xs">
+                            <span class="text-gray-500">📊 ${t.done || 0}/${t.limit || 0} done</span>
+                            <span class="text-red-400 font-bold">❌ Full</span>
+                        </div>
+                        <button disabled class="w-full py-3 rounded-xl text-center font-bold text-sm full-btn">
+                            <i class="fas fa-lock mr-1"></i> Task Full
+                        </button>
+                    </div>`;
+                }
+
+                return `
+                <div class="glass p-5 rounded-2xl border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg flex-1">${escapeHtml(t.title || 'Task')}</h3>
+                        <span class="bg-green-600/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full">৳${t.reward || 0}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-3">${escapeHtml(t.description || '')}</p>
+                    ${t.steps && t.steps.length ? `<div class="text-xs text-gray-500 mb-3">Steps: ${t.steps.map(s => escapeHtml(s)).join(' → ')}</div>` : ''}
+                    <div class="flex justify-between items-center mb-3 text-xs">
+                        <span class="text-gray-500">📊 ${t.done || 0}/${t.limit || 0} done</span>
+                        <span class="${slotsLeft < 5 ? 'text-yellow-400' : 'text-green-400'} font-bold">
+                            ⚡ ${slotsLeft} slots left
+                        </span>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="${safeUrl}" target="_blank" class="flex-1 bg-blue-600 py-3 rounded-xl text-center font-bold text-sm ${safeUrl === '#' ? 'opacity-50 cursor-not-allowed' : ''}">
+                            <i class="fas fa-external-link-alt mr-1"></i> Open Task
+                        </a>
+                        <button onclick="openProofModal('${escapeAttr(t.id)}', '${safeTitle}')" class="flex-1 bg-green-600 py-3 rounded-xl font-bold text-sm">
+                            <i class="fas fa-check mr-1"></i> Submit Proof
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function filterCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active', 'bg-purple-600', 'text-white');
+                b.classList.add('bg-gray-800', 'text-gray-400');
+            });
+            if (btn) {
+                btn.classList.remove('bg-gray-800', 'text-gray-400');
+                btn.classList.add('active', 'bg-purple-600', 'text-white');
+            }
+            renderJobs();
+        }
+
+        function searchJobs() {
+            currentSearch = document.getElementById('searchInput').value;
+            renderJobs();
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        function openProofModal(jobKey, jobTitle) {
+            currentJobKey = jobKey;
+            document.getElementById('proof-job-title').innerText = jobTitle;
+            document.getElementById('proof-files').value = '';
+            document.getElementById('proof-text').value = '';
+            document.getElementById('proof-preview').innerHTML = '';
+            document.getElementById('proof-status').classList.add('hidden');
+            openModal('proofModal');
+        }
+
+        function previewProofFiles(input) {
+            const preview = document.getElementById('proof-preview');
+            preview.querySelectorAll('img').forEach(img => {
+                if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+            });
+            preview.innerHTML = '';
+            const files = input.files;
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                if (!f.type.startsWith('image/')) continue;
+                const url = URL.createObjectURL(f);
+                preview.innerHTML += `<img src="${url}" alt="preview">`;
+            }
+        }
+
+        // ✅ Image Compressor — 5x faster upload
+        function compressImage(file, maxWidth = 1280, quality = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const base64 = canvas.toDataURL('image/jpeg', quality).split(',')[1];
+                        resolve(base64);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadAndSubmitProof() {
+            const fileInput = document.getElementById('proof-files');
+            const files = fileInput.files;
+            const proofText = document.getElementById('proof-text').value.trim();
+
+            if (files.length === 0 && !proofText) {
+                alert('⚠️ Please write a proof text or select at least one screenshot.');
+                return;
+            }
+
+            const MAX_SIZE = 2 * 1024 * 1024;
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                if (!f.type.startsWith('image/')) { alert(`❌ ${f.name} is not an image.`); return; }
+                if (f.size > MAX_SIZE) { alert(`❌ ${f.name} is larger than 2MB.`); return; }
+            }
+
+            const btn = document.getElementById('proof-submit-btn');
+            const statusEl = document.getElementById('proof-status');
+            btn.innerText = 'Submitting...';
+            btn.disabled = true;
+            statusEl.classList.add('hidden');
+
+            try {
+                const jobSnap = await db.ref('jobPosts/' + currentJobKey).once('value');
+                const job = jobSnap.val();
+                if (!job) { alert('❌ Task no longer exists.'); throw new Error('no-job'); }
+                if (job.status !== 'approved') { alert('❌ Task not active.'); throw new Error('not-active'); }
+                if (job.userId === userId) { alert('❌ Cannot submit to your own task.'); throw new Error('own-job'); }
+                if ((job.done || 0) >= (job.limit || 0)) { alert('❌ Task full.'); throw new Error('full'); }
+
+                const myCheck = await db.ref('proofSubmissions').orderByChild('userId').equalTo(userId).once('value');
+                let alreadySubmitted = false;
+                myCheck.forEach(child => {
+                    const v = child.val();
+                    if (v.jobKey === currentJobKey && v.status !== 'rejected') alreadySubmitted = true;
+                });
+                if (alreadySubmitted) { alert('❌ Already submitted.'); throw new Error('dup'); }
+
+                let downloadUrls = [];
+                if (files.length > 0) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerHTML = `<span style="color:#60a5fa;"><i class="fas fa-spinner fa-spin mr-1"></i> Compressing & uploading ${files.length} image(s)...</span>`;
+                    
+                    // ✅ Parallel upload with compression
+                    const uploadPromises = Array.from(files).map(async (file, i) => {
+                        try {
+                            const base64 = await compressImage(file, 1280, 0.7);
+                            const formData = new FormData();
+                            formData.append('image', base64);
+
+                            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const data = await res.json();
+                            
+                            if (data.success && data.data && data.data.url) {
+                                return data.data.url;
+                            }
+                            return null;
+                        } catch (upErr) {
+                            console.warn('Upload error for ' + file.name, upErr);
+                            return null;
+                        }
+                    });
+
+                    const results = await Promise.all(uploadPromises);
+                    downloadUrls = results.filter(url => url !== null);
+                    
+                    statusEl.innerHTML = `<span style="color:#34d399;"><i class="fas fa-check mr-1"></i> ${downloadUrls.length}/${files.length} uploaded</span>`;
+                }
+
+                await db.ref('proofSubmissions').push({
+                    jobKey: currentJobKey,
+                    userId: userId,
+                    userName: userName,
+                    proofUrls: downloadUrls,
+                    proofText: proofText,
+                    status: 'pending',
+                    submittedAt: Date.now()
+                });
+
+                alert('✅ Proof submitted! Job owner will review soon.');
+                closeModal('proofModal');
+                loadMySubmissions();
+                loadAllSubmissions();
+
+            } catch (err) {
+                console.error(err);
+                const skip = ['no-job','not-active','own-job','full','dup'];
+                if (!skip.includes(err.message)) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerHTML = `<span style="color:#f87171;"><i class="fas fa-times-circle mr-1"></i> ${err.message}</span>`;
+                    alert('❌ Error: ' + err.message);
+                }
+            } finally {
+                btn.innerText = 'Submit';
+                btn.disabled = false;
+            }
+        }
+
+        function openPostJobModal() {
+            document.getElementById('pj-title').value = '';
+            document.getElementById('pj-url').value = '';
+            document.getElementById('pj-desc').value = '';
+            document.getElementById('pj-reward').value = '';
+            document.getElementById('pj-limit').value = '';
+            document.getElementById('pj-balance').textContent = userBalance;
+            updateJobCost();
+            openModal('postJobModal');
+        }
+
+        function updateJobCost() {
+            const reward = parseFloat(document.getElementById('pj-reward').value) || 0;
+            const limit = parseInt(document.getElementById('pj-limit').value) || 0;
+            const cost = reward * limit;
+            document.getElementById('pj-cost').innerText = '৳' + cost.toLocaleString();
+        }
+
+        async function submitNewJob() {
+            const title = document.getElementById('pj-title').value.trim();
+            const category = document.getElementById('pj-category').value;
+            const url = document.getElementById('pj-url').value.trim();
+            const desc = document.getElementById('pj-desc').value.trim();
+            const reward = parseFloat(document.getElementById('pj-reward').value) || 0;
+            const limit = parseInt(document.getElementById('pj-limit').value) || 0;
+            const totalCost = reward * limit;
+
+            if (!title || !url || !desc || reward <= 0 || limit <= 0) { alert('⚠️ Please fill all fields properly.'); return; }
+            if (title.length < 5) { alert('⚠️ Title must be at least 5 characters.'); return; }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) { alert('⚠️ URL must start with http:// or https://'); return; }
+            if (reward < 1) { alert('⚠️ Minimum reward is ৳1.'); return; }
+            if (limit < 1 || limit > 10000) { alert('⚠️ Worker limit must be between 1 and 10000.'); return; }
+            if (totalCost > userBalance) { alert(`❌ Insufficient balance! Need ৳${totalCost} but have ৳${userBalance}.`); return; }
+            if (!confirm(`৳${totalCost.toLocaleString()} will be deducted. Proceed?`)) return;
+
+            const btn = document.getElementById('post-job-btn');
+            btn.innerText = 'Posting...';
+            btn.disabled = true;
+
+            try {
+                const result = await db.ref('users/' + userId + '/balance').transaction((currentBal) => {
+                    if ((currentBal || 0) >= totalCost) return currentBal - totalCost;
+                    return;
+                });
+
+                if (!result.committed) {
+                    alert('❌ Insufficient balance (updated).');
+                    btn.innerText = 'Post Job'; btn.disabled = false;
+                    return;
+                }
+
+                await db.ref('jobPosts').push({
+                    title, category, url, description: desc,
+                    reward, limit, done: 0, budget: totalCost,
+                    status: 'pending',
+                    userId: userId,
+                    postedBy: userName,
+                    date: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}),
+                    submittedAt: Date.now()
+                });
+
+                await db.ref('transactions/' + userId).push({
+                    type: 'Job Post',
+                    description: `Posted Micro Task: ${title} -৳${totalCost}`,
+                    amount: -totalCost,
+                    date: new Date().toISOString()
+                });
+
+                userBalance -= totalCost;
+                document.getElementById('header-balance').textContent = userBalance;
+                document.getElementById('pj-balance').textContent = userBalance;
+
+                try {
+                    const adminsSnap = await db.ref('admins').once('value');
+                    const admins = adminsSnap.val() || {};
+                    await Promise.all(Object.keys(admins).map(adminUid => 
+                        db.ref('notifications/' + adminUid).push({
+                            title: '📋 New Job Pending',
+                            message: `${userName} posted: "${title}" (৳${totalCost})`,
+                            type: 'job_pending', sentAt: Date.now(), read: false
+                        })
+                    ));
+                } catch (nErr) { console.warn('Admin notify failed:', nErr); }
+
+                alert('✅ Job posted! Admin will review soon.');
+                closeModal('postJobModal');
+                switchView('myposts');
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error: ' + err.message);
+            } finally {
+                btn.innerText = 'Post Job';
+                btn.disabled = false;
+            }
+        }
+
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) m.classList.remove('open');
+            });
+        });
+    </script>
+</body>
+</html>
