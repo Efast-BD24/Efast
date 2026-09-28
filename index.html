@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#030712" />
@@ -923,19 +922,6 @@
                     adShown = true;
                     break;
                 }
-            }
-
-            // ⚠️ Monetag Zone ID এখানে বসাতে হবে (show_আপনার_Zone_ID)
-            if (!adShown && typeof window.show_আপনার_Zone_ID === 'function') {
-                toast('info', 'Loading ad...');
-                window.show_আপনার_Zone_ID().then(() => {
-                    onAdWatched();
-                }).catch((err) => {
-                    console.warn('Monetag ad not completed:', err);
-                    toast('error', 'Ad was skipped or failed — no reward given.');
-                    db.ref('users/' + userId + '/adData/lastClick').set(0);
-                });
-                adShown = true;
             }
             
             if (!adShown) {
