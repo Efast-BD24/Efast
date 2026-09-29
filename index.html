@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="monetag" content="2c3362877e5b2b94d4abadfc56e9b2eb">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#030712" />
@@ -76,7 +77,7 @@
                 </button>
                 <div class="glass px-4 py-2 rounded-2xl flex items-center gap-2 border border-blue-500/30">
                     <i class="fas fa-coins text-yellow-400"></i>
-                    <span id="header-balance" class="font-black text-blue-400">0</span>
+                    <span id="header-balance" class="font-black text-blue-400">0.00</span>
                 </div>
             </div>
         </header>
@@ -90,7 +91,7 @@
             <section id="home" class="page active-page">
                 <div class="premium-card p-8 rounded-[2.5rem] mb-6 shadow-xl">
                     <p class="text-blue-100/70 text-sm font-bold uppercase tracking-widest">Balance</p>
-                    <h2 class="text-5xl font-black mt-2">৳ <span id="home-balance">0</span></h2>
+                    <h2 class="text-5xl font-black mt-2">৳ <span id="home-balance">0.00</span></h2>
                     
                     <div class="flex gap-2 mt-8">
                         <button onclick="showPage('earn')" class="action-btn flex-1 bg-white/10 backdrop-blur-md text-white border border-white/20">
@@ -142,7 +143,7 @@
                     <i class="fas fa-chevron-right text-gray-600"></i>
                 </div>
 
-                <div onclick="startAdTask()" id="video-ad-box" class="glass p-5 rounded-[2rem] flex items-center justify-between border-l-4 border-blue-500 cursor-pointer mb-4">
+                <div onclick="handleVideoAdClick()" id="video-ad-box" class="glass p-5 rounded-[2rem] flex items-center justify-between border-l-4 border-blue-500 cursor-pointer mb-4">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center"><i class="fas fa-play text-blue-500"></i></div>
                         <div>
@@ -414,6 +415,23 @@
         </div>
     </div>
 
+    <!-- ✅ AD WATCH NOTICE MODAL (NEW) -->
+    <div id="adNoticeModal" class="fixed inset-0 bg-black/90 z-[105] hidden flex items-center justify-center p-4">
+        <div class="glass w-full max-w-sm p-6 rounded-[2rem] border border-blue-500/30 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 bg-blue-600/20 rounded-full flex items-center justify-center">
+                <i class="fas fa-clock text-blue-400 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-white mb-3">Ad Watch Notice</h3>
+            <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20 mb-5">
+                <p class="text-white text-sm leading-relaxed">
+                    অ্যাডটি সম্পূর্ণ দেখতে <span class="text-yellow-400 font-black text-lg">৩০ সেকেন্ড</span> সময় লাগবে।
+                </p>
+                <p class="text-gray-400 text-xs mt-2">রিওয়ার্ড পেতে অ্যাডটি বন্ধ করবেন না।</p>
+            </div>
+            <button onclick="confirmAdNotice()" class="w-full bg-blue-600 py-3 rounded-xl font-bold text-white">বুঝেছি, শুরু করি</button>
+        </div>
+    </div>
+
     <!-- EDIT PROFILE MODAL -->
     <div id="editModal" class="fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-md">
         <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] border border-blue-500/30">
@@ -466,6 +484,31 @@
         let holdInterval = null;
         let holdProgress = 0;
         let holdDone = false;
+
+        // ✅ NEW: ব্যালেন্স সবসময় ২ দশমিক স্থান পর্যন্ত দেখানোর ফাংশন
+        function formatBalance(value) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return '0.00';
+            return num.toFixed(2);
+        }
+
+        // ✅ NEW: অ্যাড দেখার আগে নোটিশ (লগইন প্রতি একবার)
+        let adNoticeShown = sessionStorage.getItem('adNoticeShown') === 'true';
+
+        function handleVideoAdClick() {
+            if (!adNoticeShown) {
+                document.getElementById('adNoticeModal').classList.remove('hidden');
+            } else {
+                startAdTask();
+            }
+        }
+
+        function confirmAdNotice() {
+            adNoticeShown = true;
+            sessionStorage.setItem('adNoticeShown', 'true');
+            document.getElementById('adNoticeModal').classList.add('hidden');
+            startAdTask();
+        }
 
         function toast(type, message, duration = 3000) {
             const container = document.getElementById('toast-container');
@@ -543,8 +586,9 @@
                 balance = userData.balance || 0;
                 referCount = userData.referCount || 0;
 
-                document.getElementById('header-balance').innerText = balance;
-                document.getElementById('home-balance').innerText = balance;
+                // ✅ UPDATED: ব্যালেন্স ২ দশমিক স্থান সহ দেখানো
+                document.getElementById('header-balance').innerText = formatBalance(balance);
+                document.getElementById('home-balance').innerText = formatBalance(balance);
                 document.getElementById('display-name').innerText = userData.userName || 'User';
                 document.getElementById('display-email').innerText = email || '';
                 document.getElementById('display-phone').innerText = userData.userPhone || 'Add your number';
@@ -1193,7 +1237,7 @@
                                         ? `<span class="text-[10px] text-red-400 block">Reason: ${w.rejectReason}</span>`
                                         : ''}
                                 </div>
-                                <span>৳${w.amount}</span>
+                                <span>৳${parseFloat(w.amount || 0).toFixed(2)}</span>
                                 <span class="${statusColor}">${w.status}</span>
                             </div>`;
                 });
@@ -1220,7 +1264,7 @@
                     return;
                 }
                 items.forEach(t => {
-                    const displayAmt = t.amount > 0 ? `+৳${t.amount}` : `-৳${Math.abs(t.amount)}`;
+                    const displayAmt = t.amount > 0 ? `+৳${parseFloat(t.amount).toFixed(2)}` : `-৳${Math.abs(t.amount).toFixed(2)}`;
                     const color = t.amount >= 0 ? 'text-green-400' : 'text-red-400';
                     const date = new Date(t.date).toLocaleString();
                     html += `<div class="history-item flex justify-between items-center text-sm">
@@ -1245,7 +1289,7 @@
                     return;
                 }
                 items.forEach(t => {
-                    const displayAmt = t.amount > 0 ? `+৳${t.amount}` : `-৳${Math.abs(t.amount)}`;
+                    const displayAmt = t.amount > 0 ? `+৳${parseFloat(t.amount).toFixed(2)}` : `-৳${Math.abs(t.amount).toFixed(2)}`;
                     const color = t.amount >= 0 ? 'text-green-400' : 'text-red-400';
                     html += `<div class="flex justify-between text-xs border-b border-white/5 py-1">
                                 <span>${t.type}</span><span class="${color}">${displayAmt}</span>
@@ -1269,7 +1313,7 @@
                                     <span class="text-xs font-black text-gray-500">${medal}</span>
                                     <span class="font-bold text-sm">${u.userName}</span>
                                 </div>
-                                <span class="text-blue-400 font-black italic">৳${u.balance}</span>
+                                <span class="text-blue-400 font-black italic">৳${formatBalance(u.balance)}</span>
                             </div>`;
                 });
                 container.innerHTML = html || '<p class="text-gray-500 text-center">No users found.</p>';
@@ -1298,6 +1342,8 @@
         }
 
         function logout() {
+            // ✅ NEW: Logout এ ad notice flag clear করা (পরের লগইনে আবার দেখাবে)
+            sessionStorage.removeItem('adNoticeShown');
             auth.signOut().then(() => { window.location.reload(); });
         }
 
@@ -1312,4 +1358,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
